@@ -614,12 +614,16 @@ void MCTF::initPicture( Picture* pic )
 void MCTF::processPictures( const PicList& picList, AccessUnitList& auList, PicList& doneList, PicList& freeList )
 {
   // ensure this is only processed if necessary 
-  if( picList.empty() || ( m_lastPicIn == picList.back() && ! picList.back()->isFlush ))
+  if( picList.empty() || ( !picList.back()->isFlush &&
+      (m_encCfg->m_livePtsGop ? m_filterPoc > picList.back()->poc : m_lastPicIn == picList.back()) ))
   {
     return;
   }
   m_lastPicIn = picList.back();
 
+  // PTS planning delivers a complete bounded group. Catch up without waiting
+  // for another group just to observe a changed back() pointer.
+  do {
   // filter one picture (either all or up to frames to be encoded)
   if( picList.size()
       && m_filterPoc <= picList.back()->poc
@@ -653,14 +657,16 @@ void MCTF::processPictures( const PicList& picList, AccessUnitList& auList, PicL
     doneList.push_back( picFifo[ filterIdx ] );
   }
 
+  m_filterPoc += 1;
+  } while( m_encCfg->m_livePtsGop && m_filterPoc <= picList.back()->poc );
+
   // mark pictures not needed anymore
   for( auto pic : picList )
   {
-    if( pic->poc > m_filterPoc - VVENC_MCTF_RANGE )
+    if( pic->poc > m_filterPoc - 1 - VVENC_MCTF_RANGE )
       break;
     freeList.push_back( pic );
   }
-  m_filterPoc += 1;
 }
 
 void MCTF::motionEstimationMCTF(Picture* curPic, std::deque<TemporalFilterSourcePicInfo> &srcFrameInfo, const PelStorage& origBuf, PelStorage& origSubsampled2, PelStorage& origSubsampled4, PelStorage& origSubsampled8, std::vector<double> &mvErr, double &minError, bool addLevel, bool calcErr)

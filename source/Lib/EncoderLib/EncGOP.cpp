@@ -247,7 +247,7 @@ void EncGOP::initPicture( Picture* pic )
   pic->encTime.startTimer();
 
   pic->TLayer = pic->gopEntry->m_temporalId;
-  if( pic->ctsValid )
+  if( pic->ctsValid && !m_pcEncCfg->m_livePtsGop )
   {
     if( m_lastCts )
     {
@@ -1456,6 +1456,13 @@ void EncGOP::xInitPicsInCodingOrder( const PicList& picList )
     if( pic->isInitDone )
       continue;
 
+    // PTS boundaries can produce a standalone CRA or a short group. Wait for
+    // the next analysis chunk before placing its anchor in the serial queue;
+    // otherwise a temporarily unready picture remains in flight on reentry.
+    if( m_pcEncCfg->m_livePtsGop && m_pcEncCfg->m_RCTargetBitrate > 0 && m_pcEncCfg->m_LookAhead
+        && pic->gopEntry->m_isStartOfGop && !pic->isFlush && m_pcRateCtrl->lastPOCInCache() <= pic->poc )
+      break;
+
     // update visual activity for last start of GOP picture
     // this may have been changed in the shared picture data due to fixStartOfLastGop()
     if( pic->gopEntry->m_isStartOfGop && picList.back()->isFlush )
@@ -2474,7 +2481,9 @@ void EncGOP::xWritePicture( Picture& pic, AccessUnitList& au, bool isEncodeLtRef
       au.dts      = ( ( iDiffFrames - m_pcEncCfg->m_maxTLayer + m_numPicsOutOffset ) * m_ticksPerFrameMul4 ) / 4 + au.cts;
     else
       au.dts      = ( ( iDiffFrames - m_pcEncCfg->m_maxTLayer + m_numPicsOutOffset )) + au.cts;
-    au.dtsValid = pic.ctsValid;
+    // The matching live wrapper owns the bounded input-CTS FIFO used for DTS.
+    // Nominal-frame POC arithmetic cannot represent irregular input cadence.
+    au.dtsValid = pic.ctsValid && !m_pcEncCfg->m_livePtsGop;
   }
 
   pic.actualTotalBits += xWriteParameterSets( pic, au, m_HLSWriter );

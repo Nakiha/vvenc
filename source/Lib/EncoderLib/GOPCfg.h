@@ -67,6 +67,7 @@ class GOPCfg
 
     std::vector<GOPEntryList>    m_defaultGopLists;
     GOPEntryList                 m_remainGopList;
+    std::vector<GOPEntryList>    m_ptsGopLists;
 
     GOPEntryList*                m_gopList;
     std::vector<int>             m_pocToGopIdx;
@@ -130,6 +131,8 @@ class GOPCfg
 
     void initGopList( int refreshType, bool poc0idr, int intraPeriod, int gopSize, int leadFrames, bool bPicReordering, const vvencGOPEntry cfgGopList[ VVENC_MAX_GOP ], const vvencMCTF& mctfCfg, int firstPassMode, int m_minIntraDist );
     void getNextGopEntry( GOPEntry& gopEntry );
+    void initPtsGops( const vvencGOPEntry cfgGopList[ VVENC_MAX_GOP ] );
+    void getPtsGopEntries( const std::vector<GOPEntry*>& entries, bool intra );
     void startIntraPeriod( GOPEntry& gopEntry );
     void fixStartOfLastGop( GOPEntry& gopEntry );
     void getDefaultRPLLists( RPLList& rpl0, RPLList& rpl1 ) const;

@@ -72,6 +72,10 @@ class PreProcess : public EncStage
     bool            m_doVisAct;
     bool            m_doVisActQpa;
     bool            m_cappedCQF;
+    bool            m_havePts { false };
+    int64_t         m_firstPts { 0 };
+    int64_t         m_lastPts { 0 };
+    int64_t         m_ptsPeriodIndex { 0 };
 
   public:
     PreProcess( MsgLog& _m );
@@ -86,6 +90,7 @@ class PreProcess : public EncStage
     virtual void processPictures( const PicList& picList, AccessUnitList& auList, PicList& doneList, PicList& freeList );
 
   private:
+    void     xProcessPtsPictures  ( const PicList& picList, PicList& doneList, PicList& freeList );
     void     xFreeUnused          ( Picture* pic, const PicList& picList, PicList& doneList, PicList& freeList ) const;
     void     xGetPrevPics         ( const Picture* pic, const PicList& picList, const Picture* prevPics[ NUM_QPA_PREV_FRAMES ] ) const;
     Picture* xGetPrevTL0Pic       ( const Picture* pic, const PicList& picList ) const;

@@ -80,6 +80,9 @@ void PreProcess::init( const VVEncCfg& encCfg, bool isFinalPass )
   CHECK( m_gopCfg.getMaxTLayer() != encCfg.m_maxTLayer, "max temporal layer of gop configuration does not match pre-configured value" );
 
   m_encCfg             = &encCfg;
+  m_havePts = false;
+  m_ptsPeriodIndex = 0;
+  if( encCfg.m_livePtsGop ) m_gopCfg.initPtsGops( encCfg.m_GOPList );
 
   m_lastPoc            = std::numeric_limits<int>::min();
   m_isHighRes          = (std::min (m_encCfg->m_SourceWidth, m_encCfg->m_SourceHeight) > 1280);
@@ -101,6 +104,11 @@ void PreProcess::initPicture( Picture* pic )
 
 void PreProcess::processPictures( const PicList& picList, AccessUnitList& auList, PicList& doneList, PicList& freeList )
 {
+  if( m_encCfg->m_livePtsGop )
+  {
+    xProcessPtsPictures( picList, doneList, freeList );
+    return;
+  }
   // continue with next poc
   if( ! picList.empty() && picList.back()->poc > m_lastPoc )
   {
@@ -174,6 +182,73 @@ void PreProcess::processPictures( const PicList& picList, AccessUnitList& auList
   }
 }
 
+
+void PreProcess::xProcessPtsPictures( const PicList& picList, PicList& doneList, PicList& freeList )
+{
+  if( picList.empty() ) return;
+  const bool flush = picList.back()->isFlush;
+  const int64_t period = int64_t(m_encCfg->m_IntraPeriodSec) * m_encCfg->m_TicksPerSecond;
+  std::vector<Picture*> pending;
+  for( auto pic : picList ) if( pic->poc > m_lastPoc ) pending.push_back( pic );
+
+  while( !pending.empty() )
+  {
+    const auto first = pending.front();
+    const int64_t pts = int64_t(first->cts);
+    CHECK( !first->ctsValid, "LivePtsGop requires valid CTS" );
+    CHECK( m_havePts && pts <= m_lastPts, "LivePtsGop requires strictly increasing CTS" );
+    if( !m_havePts ) m_firstPts = pts;
+    CHECK( pts < m_firstPts || uint64_t(pts) - uint64_t(m_firstPts) > uint64_t(INT64_MAX), "CTS span overflow" );
+    const int64_t index = (pts - m_firstPts) / period;
+    const bool intra = !m_havePts || index > m_ptsPeriodIndex;
+    size_t count = intra ? 1 : std::min<size_t>(4, pending.size());
+    // Wait at most one 4-picture group. A boundary closes the preceding
+    // group as P, then starts a standalone CRA; no B references cross it.
+    bool boundary = false;
+    int64_t prev = pts;
+    for( size_t i = 1; i < count; ++i )
+    {
+      const int64_t next = int64_t(pending[i]->cts);
+      CHECK( !pending[i]->ctsValid || next <= prev, "LivePtsGop requires strictly increasing CTS" );
+      CHECK( uint64_t(next) - uint64_t(m_firstPts) > uint64_t(INT64_MAX), "CTS span overflow" );
+      if( (next - m_firstPts) / period > m_ptsPeriodIndex ) { count = i; boundary = true; break; }
+      prev = next;
+    }
+    if( !intra && !boundary && count < 4 && !flush ) break;
+
+    std::vector<GOPEntry*> entries;
+    for( size_t i = 0; i < count; ++i ) entries.push_back( &pending[i]->m_picShared->m_gopEntry );
+    m_gopCfg.getPtsGopEntries( entries, intra );
+    if( intra ) m_ptsPeriodIndex = index; // Skip empty periods after a forward jump; never emit a burst of IRAPs.
+    for( size_t i = 0; i < count; ++i )
+    {
+      auto pic = pending[i];
+      PicList prefix;
+      for( auto old : picList ) if( old->poc <= pic->poc ) prefix.push_back( old );
+      xLinkPrevQpaBufs( pic, prefix );
+      xGetVisualActivity( pic, prefix );
+      xDetectScc( pic );
+      doneList.push_back( pic );
+      m_lastPoc = pic->poc;
+      m_lastPts = int64_t(pic->cts);
+      m_havePts = true;
+    }
+    pending.erase( pending.begin(), pending.begin() + count );
+  }
+  // Release once per call, after all decisions, keeping the same VA history.
+  PicList processed;
+  for( auto pic : picList ) if( pic->poc <= m_lastPoc ) processed.push_back( pic );
+  if( !processed.empty() )
+  {
+    PicList ignored;
+    xFreeUnused( processed.back(), processed, ignored, freeList );
+    if( flush && pending.empty() )
+    {
+      freeList.clear();
+      for( auto pic : picList ) freeList.push_back( pic );
+    }
+  }
+}
 
 void PreProcess::xFreeUnused( Picture* pic, const PicList& picList, PicList& doneList, PicList& freeList ) const
 {

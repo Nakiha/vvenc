@@ -54,6 +54,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <stdarg.h>
 
 #define VVENC_NAMESPACE_BEGIN
+#define VVENC_LIVE_PTS_GOP_VERSION 1
 #define VVENC_NAMESPACE_END
 
 #ifdef __cplusplus
@@ -785,7 +786,9 @@ typedef struct vvenc_config
   int                 m_minIntraDist;
   int8_t              m_numParallelGOPs;
 
-  int8_t              m_reservedInt8[3];
+  // Fork-only opt-in. Uses one reserved byte; config size/layout is unchanged.
+  int8_t              m_livePtsGop; // PTS-grid CRA scheduling, 4-picture P/BBB groups
+  int8_t              m_reservedInt8[2];
   double              m_reservedDouble[8];
 
   // internal state variables

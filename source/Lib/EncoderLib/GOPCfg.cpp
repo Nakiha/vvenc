@@ -124,6 +124,56 @@ void GOPCfg::initGopList( int refreshType, bool poc0idr, int intraPeriod, int go
   m_adjustNoLPcodingOrder = m_refreshType == VVENC_DRT_IDR_NO_RADL && m_fixIntraPeriod <= m_maxGopSize;
 }
 
+void GOPCfg::initPtsGops( const vvencGOPEntry cfgGopList[ VVENC_MAX_GOP ] )
+{
+  // Cache every tail length. This profile references only the previous anchor;
+  // no reference can escape across the most recent CRA into an older group.
+  m_ptsGopLists.resize( m_maxGopSize );
+  for( int size = 1; size <= m_maxGopSize; ++size )
+  {
+    auto& list = m_ptsGopLists[size - 1];
+    xCreateGopList( m_maxGopSize, size, 0, cfgGopList, nullptr, list );
+    CHECK( !xCheckDBPConstraints( list ), "PTS tail exceeds advertised DPB constraints" );
+    for( const auto& entry : list )
+    {
+      CHECK( entry.m_POC == size ? entry.m_sliceType != 'P' : entry.m_sliceType != 'B', "PTS GOP requires a P anchor and B interiors" );
+      for( int l = 0; l < 2; ++l )
+        for( int r = 0; r < entry.m_numRefPics[l]; ++r )
+          CHECK( entry.m_POC - entry.m_deltaRefPics[l][r] < 0, "PTS GOP references an older anchor" );
+    }
+  }
+  CHECK( m_numReorderPics.back() > 2, "PTS wrapper supports at most two reordered pictures" );
+}
+
+void GOPCfg::getPtsGopEntries( const std::vector<GOPEntry*>& entries, bool intra )
+{
+  const int size = (int)entries.size();
+  CHECK( size < 1 || size > m_maxGopSize || (intra && size != 1), "invalid PTS group" );
+  const auto& list = m_ptsGopLists[size - 1];
+  for( int coding = 0; coding < size; ++coding )
+  {
+    const auto& src = list[coding];
+    GOPEntry& dst = *entries[src.m_POC - 1];
+    dst = src;
+    dst.m_POC = m_nextPoc + src.m_POC - 1;
+    dst.m_codingNum = m_cnOffset + coding;
+    dst.m_gopNum = m_gopNum;
+    dst.m_isValid = true;
+    if( intra )
+    {
+      dst.m_sliceType = 'I';
+      dst.m_isStartOfIntra = dst.m_isStartOfGop = true;
+      dst.m_temporalId = dst.m_vtl = 0;
+      dst.m_defaultRPLIdx = -1;
+      for( int l = 0; l < 2; ++l ) dst.m_numRefPics[l] = dst.m_numRefPicsActive[l] = 0;
+      m_lastIntraPOC = dst.m_POC;
+    }
+  }
+  m_nextPoc += size;
+  m_cnOffset += size;
+  ++m_gopNum;
+}
+
 void GOPCfg::getNextGopEntry( GOPEntry& gopEntry )
 {
   // check for lead frames
