@@ -188,6 +188,7 @@ void PreProcess::xProcessPtsPictures( const PicList& picList, PicList& doneList,
   if( picList.empty() ) return;
   const bool flush = picList.back()->isFlush;
   const int64_t period = int64_t(m_encCfg->m_IntraPeriodSec) * m_encCfg->m_TicksPerSecond;
+  const bool explicitIntra = m_encCfg->m_liveFrameIntra != 0;
   std::vector<Picture*> pending;
   for( auto pic : picList ) if( pic->poc > m_lastPoc ) pending.push_back( pic );
 
@@ -200,7 +201,7 @@ void PreProcess::xProcessPtsPictures( const PicList& picList, PicList& doneList,
     if( !m_havePts ) m_firstPts = pts;
     CHECK( pts < m_firstPts || uint64_t(pts) - uint64_t(m_firstPts) > uint64_t(INT64_MAX), "CTS span overflow" );
     const int64_t index = (pts - m_firstPts) / period;
-    const bool intra = !m_havePts || index > m_ptsPeriodIndex;
+    const bool intra = !m_havePts || (explicitIntra ? first->m_picShared->m_forceIntra : index > m_ptsPeriodIndex);
     size_t count = intra ? 1 : std::min<size_t>(4, pending.size());
     // Wait at most one 4-picture group. A boundary closes the preceding
     // group as P, then starts a standalone CRA; no B references cross it.
@@ -211,7 +212,8 @@ void PreProcess::xProcessPtsPictures( const PicList& picList, PicList& doneList,
       const int64_t next = int64_t(pending[i]->cts);
       CHECK( !pending[i]->ctsValid || next <= prev, "LivePtsGop requires strictly increasing CTS" );
       CHECK( uint64_t(next) - uint64_t(m_firstPts) > uint64_t(INT64_MAX), "CTS span overflow" );
-      if( (next - m_firstPts) / period > m_ptsPeriodIndex ) { count = i; boundary = true; break; }
+      if( explicitIntra ? pending[i]->m_picShared->m_forceIntra : (next - m_firstPts) / period > m_ptsPeriodIndex )
+      { count = i; boundary = true; break; }
       prev = next;
     }
     if( !intra && !boundary && count < 4 && !flush ) break;
@@ -219,6 +221,9 @@ void PreProcess::xProcessPtsPictures( const PicList& picList, PicList& doneList,
     std::vector<GOPEntry*> entries;
     for( size_t i = 0; i < count; ++i ) entries.push_back( &pending[i]->m_picShared->m_gopEntry );
     m_gopCfg.getPtsGopEntries( entries, intra );
+    // Keep the startup IDR, but explicit later I pictures are ordinary TRAIL I.
+    // Marking these as start-of-intra would silently upgrade them to CRA.
+    if( explicitIntra && intra && m_havePts ) entries.front()->m_isStartOfIntra = false;
     if( intra ) m_ptsPeriodIndex = index; // Skip empty periods after a forward jump; never emit a burst of IRAPs.
     for( size_t i = 0; i < count; ++i )
     {

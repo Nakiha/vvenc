@@ -707,6 +707,7 @@ VVENC_DECL void vvenc_config_default(vvenc_config *c )
   c->m_fga                                     = false;
 
   c->m_livePtsGop = 0;
+  c->m_liveFrameIntra = 0;
   memset( c->m_reservedInt8, 0, sizeof(c->m_reservedInt8) );
   memset( c->m_reservedDouble, 0, sizeof(c->m_reservedDouble) );
 
@@ -771,12 +772,14 @@ VVENC_DECL bool vvenc_init_config_parameter( vvenc_config *c )
   vvenc_confirmParameter( c, c->m_IntraPeriodSec < 0,                                                    "IDR period (in seconds) must be >= 0");
   if( c->m_livePtsGop )
   {
+    vvenc_confirmParameter( c, c->m_liveFrameIntra != 0 && c->m_liveFrameIntra != 1, "LiveFrameIntra must be 0 or 1" );
     vvenc_confirmParameter( c, c->m_livePtsGop != 1 || c->m_GOPSize != 4 || !c->m_poc0idr || !c->m_picReordering
       || c->m_DecodingRefreshType != VVENC_DRT_CRA || c->m_sliceTypeAdapt != 0
       || c->m_leadFrames || c->m_trailFrames || c->m_TicksPerSecond <= 0 || c->m_IntraPeriodSec <= 0
       || c->m_RCNumPasses != 1 || c->m_maxParallelFrames != 0 || c->m_vvencMCTF.MCTFFutureReference,
       "LivePtsGop requires GOP4, POC0IDR, CRA, reordering, STA=0, no lead/trail/future MCTF, explicit ticks, single pass and MaxParallelFrames=0" );
   }
+  vvenc_confirmParameter( c, c->m_liveFrameIntra && !c->m_livePtsGop, "LiveFrameIntra requires LivePtsGop" );
 
   vvenc_confirmParameter( c, c->m_GOPSize < 1 || c->m_GOPSize > VVENC_MAX_GOP,                           "GOP Size must be between 1 and 64" );
   vvenc_confirmParameter( c, c->m_leadFrames < 0 || c->m_leadFrames > VVENC_MAX_GOP,                     "Lead frames exceeds supported range (0 to 64)" );

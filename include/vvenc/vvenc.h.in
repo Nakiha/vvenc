@@ -137,6 +137,7 @@ typedef struct vvencYUVBuffer
   uint64_t      sequenceNumber;        // sequence number of the picture
   int64_t       cts;                   // composition time stamp in TicksPerSecond
   bool          ctsValid;              // composition time stamp valid flag (true: valid, false: CTS not set)
+  bool          forceIntra;            // fork: ordinary I, only with m_liveFrameIntra; not an IRAP request
 #if VVENC_USE_UNSTABLE_API
   void*         userData;              // user data to be returned in corresponding access unit
 #endif
