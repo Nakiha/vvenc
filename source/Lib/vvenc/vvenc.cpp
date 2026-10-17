@@ -94,6 +94,7 @@ VVENC_DECL void vvenc_YUVBuffer_default(vvencYUVBuffer *yuvBuffer )
   yuvBuffer->sequenceNumber  = 0;
   yuvBuffer->cts             = 0;
   yuvBuffer->ctsValid        = false;
+  yuvBuffer->forceIntra      = false;
 }
 
 

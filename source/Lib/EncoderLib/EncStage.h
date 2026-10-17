@@ -66,6 +66,7 @@ public:
   bool             m_isSccWeak;
   bool             m_isSccStrong;
   bool             m_forceSCC;
+  bool             m_forceIntra;
   int              m_picMemorySTA;
   uint16_t         m_picMotEstError;
   uint8_t          m_minNoiseLevels[QPA_MAX_NOISE_LEVELS];
@@ -90,6 +91,7 @@ public:
   , m_isSccWeak      ( false )
   , m_isSccStrong    ( false )
   , m_forceSCC       ( false )
+  , m_forceIntra     ( false )
   , m_picMemorySTA   ( 0 )
   , m_picMotEstError ( 0 )
   , m_picAuxQpOffset ( 0 )
@@ -146,6 +148,7 @@ public:
     m_isLead       = poc < 0;
     m_isTrail      = m_maxFrames > 0 && poc >= m_maxFrames;
     m_ctsValid     = yuvInBuf->ctsValid;
+    m_forceIntra   = yuvInBuf->forceIntra;
     m_ctuBimQpOffset.resize( 0 );
     m_picMotEstError = 0;
     m_picAuxQpOffset = 0;
