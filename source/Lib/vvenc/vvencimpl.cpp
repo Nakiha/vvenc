@@ -282,6 +282,8 @@ int VVEncImpl::encode( vvencYUVBuffer* pcYUVBuffer, vvencAccessUnit* pcAccessUni
   bool bFlush = false;
   if( pcYUVBuffer )
   {
+    if (pcYUVBuffer->liveQpOffset < -63 || pcYUVBuffer->liveQpOffset > 63 ||
+        (pcYUVBuffer->liveQpOffset && !m_cVVEncCfg.m_liveCqfPoll)) return VVENC_ERR_PARAMETER;
     if( m_eState == INTERNAL_STATE_FLUSHING ) { m_cErrorString = "encoder already received flush indication, please reinit."; return VVENC_ERR_RESTART_REQUIRED; }
 
     if( pcYUVBuffer->planes[0].ptr == nullptr )
@@ -762,6 +764,7 @@ int VVEncImpl::xCopyAu( vvencAccessUnit& rcAccessUnit, const vvenc::AccessUnitLi
     rcAccessUnit.dtsValid        = rcAuList.dtsValid;
     rcAccessUnit.cts             = rcAuList.cts;
     rcAccessUnit.dts             = rcAuList.dts;
+    rcAccessUnit.liveSliceQp     = rcAuList.liveSliceQp;
     rcAccessUnit.sliceType       = (vvencSliceType)rcAuList.sliceType;
     rcAccessUnit.refPic          = rcAuList.refPic;
     rcAccessUnit.temporalLayer   = rcAuList.temporalLayer;

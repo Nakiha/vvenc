@@ -94,6 +94,7 @@ VVENC_DECL void vvenc_YUVBuffer_default(vvencYUVBuffer *yuvBuffer )
   yuvBuffer->sequenceNumber  = 0;
   yuvBuffer->cts             = 0;
   yuvBuffer->ctsValid        = false;
+  yuvBuffer->liveQpOffset = 0;
   yuvBuffer->forceIntra      = false;
 }
 
@@ -188,6 +189,7 @@ VVENC_DECL void vvenc_accessUnit_reset(vvencAccessUnit *accessUnit )
   accessUnit->ctsValid        = false;
   accessUnit->dtsValid        = false;
   accessUnit->rap             = false;
+  accessUnit->liveSliceQp = -1;
   accessUnit->sliceType       = VVENC_NUMBER_OF_SLICE_TYPES;
   accessUnit->refPic          = false;
   accessUnit->temporalLayer   = 0;

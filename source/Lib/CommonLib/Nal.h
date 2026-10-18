@@ -172,6 +172,7 @@ public:
     poc          = 0;
     sliceType     = VVENC_NUMBER_OF_SLICE_TYPES;
     temporalLayer = 0;
+    liveSliceQp   = -1;
     status        = 0;
     ctsValid      = false;
     dtsValid      = false;
@@ -197,6 +198,7 @@ public:
   uint64_t        poc;                                   ///< picture order count
   vvencSliceType  sliceType;                              ///< slice type (I/P/B) */
   int             temporalLayer;                          ///< temporal layer
+  int             liveSliceQp;
   int             status;
   bool            ctsValid;                               ///< composition time stamp valid flag
   bool            dtsValid;                               ///< decoding time stamp valid flag

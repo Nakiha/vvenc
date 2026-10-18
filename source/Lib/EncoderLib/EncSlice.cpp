@@ -409,7 +409,7 @@ int EncSlice::xGetQPForPicture( const Slice* slice )
   }
   else
   {
-    qp = m_pcEncCfg->m_QP + slice->pic->gopAdaptedQP;
+    qp = m_pcEncCfg->m_QP + slice->pic->gopAdaptedQP + slice->pic->m_picShared->m_liveQpOffset;
 
     if (m_pcEncCfg->m_usePerceptQPA)
     {

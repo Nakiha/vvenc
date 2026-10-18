@@ -2468,6 +2468,7 @@ void EncGOP::xWritePicture( Picture& pic, AccessUnitList& au, bool isEncodeLtRef
   if( ! pic.slices.empty() )
   {
     au.sliceType = pic.slices[ 0 ]->sliceType;
+    au.liveSliceQp = pic.slices[ 0 ]->sliceQp;
   }
 
   if( pic.ctsValid )
