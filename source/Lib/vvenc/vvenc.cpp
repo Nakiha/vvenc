@@ -189,6 +189,7 @@ VVENC_DECL void vvenc_accessUnit_reset(vvencAccessUnit *accessUnit )
   accessUnit->ctsValid        = false;
   accessUnit->dtsValid        = false;
   accessUnit->rap             = false;
+  accessUnit->liveTrace = {};
   accessUnit->liveSliceQp = -1;
   accessUnit->sliceType       = VVENC_NUMBER_OF_SLICE_TYPES;
   accessUnit->refPic          = false;

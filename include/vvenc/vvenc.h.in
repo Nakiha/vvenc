@@ -131,12 +131,44 @@ typedef struct vvencYUVPlane
 /*
   The struct vvencYUVBuffer contains the data and attributes to hand over the uncompressed input picture and metadata related to the picture.
 */
+#define VVENC_LIVE_FRAME_TRACE_VERSION 1
+#define VVENC_LIVE_FRAME_TRACE_FIELDS(X) X(input_us) \
+    X(group_last_input_us) \
+    X(group_formed_us) \
+    X(preprocess_begin_us) \
+    X(group_ready_us) \
+    X(mctf_begin_us) \
+    X(mctf_end_us) \
+    X(dispatch_us) \
+    X(compress_return_us) \
+    X(ctu_done_us) \
+    X(finalize_end_us) \
+    X(reconstructed_us) \
+    X(au_us) \
+    X(preprocess_cpu_us) \
+    X(dispatch_cpu_us) \
+    X(finalize_cpu_us) \
+    X(ctu_cpu_us) \
+    X(deblock_cpu_us) \
+    X(sao_cpu_us) \
+    X(alf_cpu_us) \
+    X(finish_cpu_us) \
+    X(task_wall_us) \
+    X(task_calls)
+
+typedef struct vvencLiveFrameTrace {
+#define VVENC_TRACE_DECLARE(n) int64_t n;
+    VVENC_LIVE_FRAME_TRACE_FIELDS(VVENC_TRACE_DECLARE)
+#undef VVENC_TRACE_DECLARE
+} vvencLiveFrameTrace;
+
 typedef struct vvencYUVBuffer
 {
   vvencYUVPlane planes[ 3 ];           // plane buffer for 3 components (yuv)
   uint64_t      sequenceNumber;        // sequence number of the picture
   int64_t       cts;                   // composition time stamp in TicksPerSecond
   bool          ctsValid;              // composition time stamp valid flag (true: valid, false: CTS not set)
+  bool          liveTrace;             // opt-in diagnostic telemetry; matching ABI required
   int           liveQpOffset;          // fork API1: per-picture base QP delta; live CQF poll only
   bool          forceIntra;            // fork: ordinary I, only with m_liveFrameIntra; not an IRAP request
 #if VVENC_USE_UNSTABLE_API
@@ -200,6 +232,7 @@ typedef struct vvencAccessUnit
   int             temporalLayer;       // temporal layer
   uint64_t        poc;                 // picture order count
 
+  vvencLiveFrameTrace liveTrace;
   int             liveSliceQp;         // actual slice QP before CTU QPA
   int             status;              // additional info (see Status)
   int             essentialBytes;      // number of bytes in nalus of type SLICE_*, DCI, VPS, SPS, PPS, PREFIX_APS, SUFFIX_APS

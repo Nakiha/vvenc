@@ -225,14 +225,22 @@ void PreProcess::xProcessPtsPictures( const PicList& picList, PicList& doneList,
     // Marking these as start-of-intra would silently upgrade them to CRA.
     if( explicitIntra && intra && m_havePts ) entries.front()->m_isStartOfIntra = false;
     if( intra ) m_ptsPeriodIndex = index; // Skip empty periods after a forward jump; never emit a burst of IRAPs.
+    const int64_t groupFormed=first->m_picShared->m_liveTrace.data.input_us?liveTraceNow():0;
     for( size_t i = 0; i < count; ++i )
     {
       auto pic = pending[i];
       PicList prefix;
       for( auto old : picList ) if( old->poc <= pic->poc ) prefix.push_back( old );
+      auto& trace=pic->m_picShared->m_liveTrace.data;
+      int64_t cpu=0;
+      if(trace.input_us) {
+        trace.group_last_input_us=pending[count-1]->m_picShared->m_liveTrace.data.input_us;
+        trace.group_formed_us=groupFormed;trace.preprocess_begin_us=liveTraceNow();cpu=liveTraceCpu();
+      }
       xLinkPrevQpaBufs( pic, prefix );
       xGetVisualActivity( pic, prefix );
       xDetectScc( pic );
+      if(trace.input_us){trace.group_ready_us=liveTraceNow();trace.preprocess_cpu_us=liveTraceCpu()-cpu;}
       doneList.push_back( pic );
       m_lastPoc = pic->poc;
       m_lastPts = int64_t(pic->cts);

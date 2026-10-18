@@ -51,6 +51,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "CommonLib/Nal.h"
 
 #include <vector>
+#include "LiveTrace.h"
 
 //! \ingroup EncoderLib
 //! \{
@@ -67,6 +68,7 @@ public:
   bool             m_isSccStrong;
   bool             m_forceSCC;
   bool             m_forceIntra;
+  LiveTrace        m_liveTrace;
   int              m_liveQpOffset;
   int              m_picMemorySTA;
   uint16_t         m_picMotEstError;
@@ -137,6 +139,7 @@ public:
     CHECK( m_refCount < 0, "PicShared not created" );
     CHECK( isUsed(),       "PicShared still in use" );
 
+    m_liveTrace.reset(yuvInBuf->liveTrace);
     copyPadToPelUnitBuf( m_origBuf, *yuvInBuf, getChromaFormat() );
 
     m_picVA.reset();

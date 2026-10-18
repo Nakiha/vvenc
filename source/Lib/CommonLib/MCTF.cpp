@@ -648,11 +648,14 @@ void MCTF::processPictures( const PicList& picList, AccessUnitList& auList, PicL
     CHECK( picFifo.empty(), "MCTF: no pictures to be filtered found" );
     CHECK( filterIdx >= (int)picFifo.size(), "MCTF: picture filter error" );
     CHECK( picFifo[ filterIdx ]->poc != m_filterPoc, "MCTF: picture filter error" );
+    auto& trace=picFifo[filterIdx]->m_picShared->m_liveTrace.data;
+    if(trace.input_us)trace.mctf_begin_us=liveTraceNow();
     // filter picture (when more than 1 picture is available for processing)
     if( picFifo.size() > 1 )
     {
       filter( picFifo, filterIdx );
     }
+    if(trace.input_us)trace.mctf_end_us=liveTraceNow();
     // set picture done
     doneList.push_back( picFifo[ filterIdx ] );
   }

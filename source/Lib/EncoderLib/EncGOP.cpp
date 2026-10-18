@@ -587,6 +587,9 @@ void EncGOP::xSyncAlfAps( Picture& pic )
 
 void EncGOP::xEncodePicture( Picture* pic, EncPicture* picEncoder )
 {
+  auto& trace=pic->m_picShared->m_liveTrace.data;
+  int64_t traceCpu=0;
+  if(trace.input_us){trace.dispatch_us=liveTraceNow();traceCpu=liveTraceCpu();}
   // first pass temporal down-sampling
   if( ( ! m_pcRateCtrl->rcIsFinalPass || m_isPreAnalysis ) && pic->gopEntry->m_skipFirstPass )
   {
@@ -627,6 +630,7 @@ void EncGOP::xEncodePicture( Picture* pic, EncPicture* picEncoder )
 
   // compress next picture
   picEncoder->compressPicture( *pic, *this );
+  if(trace.input_us){trace.compress_return_us=liveTraceNow();trace.dispatch_cpu_us=liveTraceCpu()-traceCpu;}
 
   if ( m_pcEncCfg->m_fga && !m_isPreAnalysis && m_pcRateCtrl->rcIsFinalPass )
   {
@@ -650,9 +654,13 @@ void EncGOP::xEncodePicture( Picture* pic, EncPicture* picEncoder )
   if( m_pcEncCfg->m_numThreads > 0 )
   {
     static auto finishTask = []( int, FinishTaskParam* param ) {
+      auto& trace=param->pic->m_picShared->m_liveTrace.data;
+      int64_t cpu=0;if(trace.input_us){trace.ctu_done_us=liveTraceNow();cpu=liveTraceCpu();}
       param->picEncoder->finalizePicture( *param->pic );
+      if(trace.input_us){trace.finalize_end_us=liveTraceNow();trace.finalize_cpu_us=liveTraceCpu()-cpu;}
       {
         std::lock_guard<std::mutex> lock( param->gopEncoder->m_gopEncMutex );
+        if(trace.input_us)trace.reconstructed_us=liveTraceNow();
         param->pic->isReconstructed = true;
         if( param->pic->picApsGlobal ) param->pic->picApsGlobal->initalized = true;
         param->gopEncoder->m_freePicEncoderList.push_back( param->picEncoder );
@@ -666,7 +674,9 @@ void EncGOP::xEncodePicture( Picture* pic, EncPicture* picEncoder )
   }
   else
   {
+    int64_t cpu=0;if(trace.input_us){trace.ctu_done_us=liveTraceNow();cpu=liveTraceCpu();}
     picEncoder->finalizePicture( *pic );
+    if(trace.input_us){trace.finalize_end_us=liveTraceNow();trace.finalize_cpu_us=liveTraceCpu()-cpu;trace.reconstructed_us=liveTraceNow();}
     pic->isReconstructed = true;
     if( pic->picApsGlobal ) pic->picApsGlobal->initalized = true;
     m_freePicEncoderList.push_back( picEncoder );
@@ -2499,6 +2509,10 @@ void EncGOP::xWritePicture( Picture& pic, AccessUnitList& au, bool isEncodeLtRef
   xWriteTrailingSEIs( pic, au, digestStr );
   xPrintPictureInfo ( pic, au, digestStr, m_pcEncCfg->m_printFrameMSE, isEncodeLtRef );
   DTRACE_UPDATE( g_trace_ctx, std::make_pair( "bsfinal", 0 ) );
+  if(pic.m_picShared->m_liveTrace.data.input_us) {
+    pic.m_picShared->m_liveTrace.data.au_us=liveTraceNow();
+    au.liveTrace=pic.m_picShared->m_liveTrace.snapshot();
+  }
 }
 
 int EncGOP::xWriteParameterSets( Picture& pic, AccessUnitList& accessUnit, HLSWriter& hlsWriter )

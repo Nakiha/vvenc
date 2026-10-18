@@ -939,6 +939,8 @@ bool EncSlice::xProcessCtuTask( int threadIdx, CtuEncParam* ctuEncParam )
         if( checkReadyState )
           return true;
 
+        LiveTaskTimer liveTimer(pic->m_picShared->m_liveTrace,currState);
+
 #ifdef TRACE_ENABLE_ITT
         std::stringstream ss;
         ss << "Encode_" << slice.poc << "_CTU_" << ctuPosY << "_" << ctuPosX;
@@ -1005,6 +1007,8 @@ bool EncSlice::xProcessCtuTask( int threadIdx, CtuEncParam* ctuEncParam )
         if( checkReadyState )
           return true;
 
+        LiveTaskTimer liveTimer(pic->m_picShared->m_liveTrace,currState);
+
         ITT_TASKSTART( itt_domain_encode, itt_handle_rspLfVer );
 
         // reshape
@@ -1051,6 +1055,8 @@ bool EncSlice::xProcessCtuTask( int threadIdx, CtuEncParam* ctuEncParam )
         if( checkReadyState )
           return true;
 
+        LiveTaskTimer liveTimer(pic->m_picShared->m_liveTrace,currState);
+
         ITT_TASKSTART( itt_domain_encode, itt_handle_lfHor );
 
         if( !cs.pps->deblockingFilterControlPresent || !cs.pps->deblockingFilterDisabled || cs.pps->deblockingFilterOverrideEnabled )
@@ -1083,6 +1089,8 @@ bool EncSlice::xProcessCtuTask( int threadIdx, CtuEncParam* ctuEncParam )
 
         if( checkReadyState )
           return true;
+
+        LiveTaskTimer liveTimer(pic->m_picShared->m_liveTrace,currState);
 
         ITT_TASKSTART( itt_domain_encode, itt_handle_sao );
 
@@ -1151,6 +1159,8 @@ bool EncSlice::xProcessCtuTask( int threadIdx, CtuEncParam* ctuEncParam )
         if( checkReadyState )
           return true;
 
+        LiveTaskTimer liveTimer(pic->m_picShared->m_liveTrace,currState);
+
         ITT_TASKSTART( itt_domain_encode, itt_handle_alf_stat );
 
         // ALF pre-processing
@@ -1200,6 +1210,8 @@ bool EncSlice::xProcessCtuTask( int threadIdx, CtuEncParam* ctuEncParam )
         if( checkReadyState )
           return true;
 
+        LiveTaskTimer liveTimer(pic->m_picShared->m_liveTrace,currState);
+
         ITT_TASKSTART( itt_domain_encode, itt_handle_alf_derive );
         // ALF post-processing
         if( slice.sps->alfEnabled )
@@ -1247,6 +1259,8 @@ bool EncSlice::xProcessCtuTask( int threadIdx, CtuEncParam* ctuEncParam )
         if( checkReadyState )
           return true;
 
+        LiveTaskTimer liveTimer(pic->m_picShared->m_liveTrace,currState);
+
         ITT_TASKSTART( itt_domain_encode, itt_handle_alf_recon );
 
         if( slice.sps->alfEnabled )
@@ -1273,6 +1287,8 @@ bool EncSlice::xProcessCtuTask( int threadIdx, CtuEncParam* ctuEncParam )
 
         if( checkReadyState )
           return true;
+
+        LiveTaskTimer liveTimer(pic->m_picShared->m_liveTrace,currState);
 
         ITT_TASKSTART( itt_domain_encode, itt_handle_ccalf_stat );
 
@@ -1323,6 +1339,8 @@ bool EncSlice::xProcessCtuTask( int threadIdx, CtuEncParam* ctuEncParam )
         if( checkReadyState )
           return true;
 
+        LiveTaskTimer liveTimer(pic->m_picShared->m_liveTrace,currState);
+
         ITT_TASKSTART( itt_domain_encode, itt_handle_ccalf_derive );
 
         // start task
@@ -1365,6 +1383,8 @@ bool EncSlice::xProcessCtuTask( int threadIdx, CtuEncParam* ctuEncParam )
 
         if( checkReadyState )
           return true;
+
+        LiveTaskTimer liveTimer(pic->m_picShared->m_liveTrace,currState);
 
         ITT_TASKSTART( itt_domain_encode, itt_handle_ccalf_recon );
 
@@ -1420,6 +1440,8 @@ bool EncSlice::xProcessCtuTask( int threadIdx, CtuEncParam* ctuEncParam )
 
         if( checkReadyState )
           return true;
+
+        LiveTaskTimer liveTimer(pic->m_picShared->m_liveTrace,currState);
 
         encSlice->finishCompressSlice( cs.picture, slice );
 
