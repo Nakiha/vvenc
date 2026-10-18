@@ -6,7 +6,8 @@ clients with the matching ABI. Opt-in is restricted to the live CQF poll path.
 
 Each PicShared resets on reuse. Steady-clock microsecond events cover input copy,
 last required group input, group formation, per-picture QPA preprocessing, MCTF,
-GOP dispatch, compress submission return, CTU completion, finalize, reconstruction
+GOP dispatch, compress submission return, first/last successful CTU task,
+finalize callback entry/end, reconstruction
 and actual AU construction. They change no readiness checks or coding choices.
 Input/group timestamps must be correlated by CTS/POC, not output order.
 

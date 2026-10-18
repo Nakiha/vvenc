@@ -141,7 +141,9 @@ typedef struct vvencYUVPlane
     X(mctf_end_us) \
     X(dispatch_us) \
     X(compress_return_us) \
+    X(task_first_us) \
     X(ctu_done_us) \
+    X(finalize_begin_us) \
     X(finalize_end_us) \
     X(reconstructed_us) \
     X(au_us) \

@@ -14,15 +14,15 @@ inline int64_t liveTraceCpu() {
 }
 struct LiveTrace {
   vvencLiveFrameTrace data{};
-  std::atomic<int64_t> cpu[5],wall,calls;
+  std::atomic<int64_t> cpu[5],wall,calls,first,last;
   LiveTrace(){ reset(false); }
   void reset(bool enabled) {
     data={}; for(auto& c:cpu)c.store(0,std::memory_order_relaxed);
-    wall.store(0,std::memory_order_relaxed);calls.store(0,std::memory_order_relaxed);
+    wall.store(0,std::memory_order_relaxed);calls.store(0,std::memory_order_relaxed);first.store(0);last.store(0);
     if(enabled)data.input_us=liveTraceNow();
   }
   vvencLiveFrameTrace snapshot() const {
-    auto d=data; d.ctu_cpu_us=cpu[0].load(); d.deblock_cpu_us=cpu[1].load();
+    auto d=data;d.task_first_us=first.load(); d.ctu_cpu_us=cpu[0].load(); d.deblock_cpu_us=cpu[1].load();
     d.sao_cpu_us=cpu[2].load();d.alf_cpu_us=cpu[3].load();d.finish_cpu_us=cpu[4].load();
     d.task_wall_us=wall.load();d.task_calls=calls.load();return d;
   }
@@ -30,8 +30,13 @@ struct LiveTrace {
 struct LiveTaskTimer {
   LiveTrace* trace; int kind;int64_t wall=0,cpu=0;
   LiveTaskTimer(LiveTrace& t,int state):trace(t.data.input_us?&t:nullptr),kind(state==0?0:state<=2?1:state==3?2:state<=9?3:4) {
-    if(trace){wall=liveTraceNow();cpu=liveTraceCpu();}
+    if(trace){
+      wall=liveTraceNow();int64_t old=trace->first.load();
+      while((!old||wall<old)&&!trace->first.compare_exchange_weak(old,wall)){}
+      cpu=liveTraceCpu();
+    }
   }
-  ~LiveTaskTimer(){if(trace){trace->cpu[kind].fetch_add(liveTraceCpu()-cpu,std::memory_order_relaxed);trace->wall.fetch_add(liveTraceNow()-wall,std::memory_order_relaxed);trace->calls.fetch_add(1,std::memory_order_relaxed);}}
+  ~LiveTaskTimer(){if(trace){trace->cpu[kind].fetch_add(liveTraceCpu()-cpu,std::memory_order_relaxed);int64_t end=liveTraceNow();trace->wall.fetch_add(end-wall,std::memory_order_relaxed);trace->calls.fetch_add(1,std::memory_order_relaxed);
+    int64_t old=trace->last.load();while(old<end&&!trace->last.compare_exchange_weak(old,end)){}}}
 };
 }

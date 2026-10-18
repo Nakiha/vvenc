@@ -655,7 +655,7 @@ void EncGOP::xEncodePicture( Picture* pic, EncPicture* picEncoder )
   {
     static auto finishTask = []( int, FinishTaskParam* param ) {
       auto& trace=param->pic->m_picShared->m_liveTrace.data;
-      int64_t cpu=0;if(trace.input_us){trace.ctu_done_us=liveTraceNow();cpu=liveTraceCpu();}
+      int64_t cpu=0;if(trace.input_us){trace.ctu_done_us=param->pic->m_picShared->m_liveTrace.last.load();trace.finalize_begin_us=liveTraceNow();cpu=liveTraceCpu();}
       param->picEncoder->finalizePicture( *param->pic );
       if(trace.input_us){trace.finalize_end_us=liveTraceNow();trace.finalize_cpu_us=liveTraceCpu()-cpu;}
       {
@@ -674,7 +674,7 @@ void EncGOP::xEncodePicture( Picture* pic, EncPicture* picEncoder )
   }
   else
   {
-    int64_t cpu=0;if(trace.input_us){trace.ctu_done_us=liveTraceNow();cpu=liveTraceCpu();}
+    int64_t cpu=0;if(trace.input_us){trace.ctu_done_us=pic->m_picShared->m_liveTrace.last.load();trace.finalize_begin_us=liveTraceNow();cpu=liveTraceCpu();}
     picEncoder->finalizePicture( *pic );
     if(trace.input_us){trace.finalize_end_us=liveTraceNow();trace.finalize_cpu_us=liveTraceCpu()-cpu;trace.reconstructed_us=liveTraceNow();}
     pic->isReconstructed = true;
