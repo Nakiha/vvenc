@@ -656,7 +656,7 @@ void EncGOP::xEncodePicture( Picture* pic, EncPicture* picEncoder )
 
   // compress next picture
   picEncoder->compressPicture( *pic, *this );
-  if(trace.input_us){trace.compress_return_us=liveTraceNow();trace.dispatch_cpu_us=liveTraceCpu()-traceCpu;}
+  if(trace.input_us){trace.dispatch_cpu_us=liveTraceCpu()-traceCpu;trace.compress_return_us=liveTraceNow();}
 
   if ( m_pcEncCfg->m_fga && !m_isPreAnalysis && m_pcRateCtrl->rcIsFinalPass )
   {
@@ -684,7 +684,7 @@ void EncGOP::xEncodePicture( Picture* pic, EncPicture* picEncoder )
       int64_t cpu=0;if(trace.input_us){trace.ctu_done_us=param->pic->m_picShared->m_liveTrace.last.load();trace.finalize_begin_us=liveTraceNow();cpu=liveTraceCpu();}
       param->picEncoder->finalizePicture( *param->pic );
       param->pic->prepareReference8();
-      if(trace.input_us){trace.finalize_end_us=liveTraceNow();trace.finalize_cpu_us=liveTraceCpu()-cpu;}
+      if(trace.input_us){trace.finalize_cpu_us=liveTraceCpu()-cpu;trace.finalize_end_us=liveTraceNow();}
       {
         std::lock_guard<std::mutex> lock( param->gopEncoder->m_gopEncMutex );
         if(trace.input_us){trace.reconstructed_us=liveTraceNow();param->gopEncoder->m_liveLastDoneUs.store(trace.reconstructed_us);}
@@ -704,7 +704,7 @@ void EncGOP::xEncodePicture( Picture* pic, EncPicture* picEncoder )
     int64_t cpu=0;if(trace.input_us){trace.ctu_done_us=pic->m_picShared->m_liveTrace.last.load();trace.finalize_begin_us=liveTraceNow();cpu=liveTraceCpu();}
     picEncoder->finalizePicture( *pic );
     pic->prepareReference8();
-    if(trace.input_us){trace.finalize_end_us=liveTraceNow();trace.finalize_cpu_us=liveTraceCpu()-cpu;trace.reconstructed_us=liveTraceNow();m_liveLastDoneUs.store(trace.reconstructed_us);}
+    if(trace.input_us){trace.finalize_cpu_us=liveTraceCpu()-cpu;trace.finalize_end_us=liveTraceNow();trace.reconstructed_us=liveTraceNow();m_liveLastDoneUs.store(trace.reconstructed_us);}
     pic->isReconstructed = true;
     if( pic->picApsGlobal ) pic->picApsGlobal->initalized = true;
     m_freePicEncoderList.push_back( picEncoder );
@@ -1559,7 +1559,7 @@ void EncGOP::xInitPicsInCodingOrder( const PicList& picList )
 
     // continue with next picture
     m_lastCodingNum = pic->gopEntry->m_codingNum;
-    if(trace.input_us){trace.gop_init_end_us=liveTraceNow();trace.gop_init_cpu_us=liveTraceCpu()-cpu;}
+    if(trace.input_us){trace.gop_init_cpu_us=liveTraceCpu()-cpu;trace.gop_init_end_us=liveTraceNow();}
 
     // in single threading initialize only one picture per encoding loop
     if( m_pcEncCfg->m_maxParallelFrames <= 0 )

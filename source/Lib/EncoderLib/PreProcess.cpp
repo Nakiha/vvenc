@@ -240,7 +240,7 @@ void PreProcess::xProcessPtsPictures( const PicList& picList, PicList& doneList,
       xLinkPrevQpaBufs( pic, prefix );
       xGetVisualActivity( pic, prefix );
       xDetectScc( pic );
-      if(trace.input_us){trace.group_ready_us=liveTraceNow();trace.preprocess_cpu_us=liveTraceCpu()-cpu;}
+      if(trace.input_us){trace.preprocess_cpu_us=liveTraceCpu()-cpu;trace.group_ready_us=liveTraceNow();}
       doneList.push_back( pic );
       m_lastPoc = pic->poc;
       m_lastPts = int64_t(pic->cts);
