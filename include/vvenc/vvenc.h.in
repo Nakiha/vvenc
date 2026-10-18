@@ -131,7 +131,7 @@ typedef struct vvencYUVPlane
 /*
   The struct vvencYUVBuffer contains the data and attributes to hand over the uncompressed input picture and metadata related to the picture.
 */
-#define VVENC_LIVE_FRAME_TRACE_VERSION 1
+#define VVENC_LIVE_FRAME_TRACE_VERSION 2
 #define VVENC_LIVE_FRAME_TRACE_FIELDS(X) X(input_us) \
     X(group_last_input_us) \
     X(group_formed_us) \
@@ -156,7 +156,20 @@ typedef struct vvencYUVPlane
     X(alf_cpu_us) \
     X(finish_cpu_us) \
     X(task_wall_us) \
-    X(task_calls)
+    X(task_calls) \
+    X(gop_enter_us) \
+    X(gop_init_begin_us) \
+    X(gop_init_end_us) \
+    X(gop_init_cpu_us) \
+    X(gop_previous_done_us) \
+    X(gop_visits) \
+    X(gop_order_blocks) \
+    X(gop_analysis_blocks) \
+    X(gop_ratecap_blocks) \
+    X(gop_reference_blocks) \
+    X(gop_aps_blocks) \
+    X(gop_encoder_blocks) \
+    X(gop_rc_blocks)
 
 typedef struct vvencLiveFrameTrace {
 #define VVENC_TRACE_DECLARE(n) int64_t n;

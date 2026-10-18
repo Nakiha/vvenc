@@ -170,6 +170,8 @@ private:
   std::deque<PicApsGlobal*> m_globalApsList;
   std::vector<int>          m_globalCtuQpVector;
   bool                      m_forceSCC;
+  // Diagnostic serial predecessor release clock; never used for scheduling.
+  std::atomic<int64_t>       m_liveLastDoneUs { 0 };
 
   FGAnalyzer                m_fgAnalyzer;
 

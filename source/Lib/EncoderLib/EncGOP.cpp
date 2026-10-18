@@ -244,6 +244,8 @@ void EncGOP::setRecYUVBufferCallback( void* ctx, std::function<void( void*, vven
 
 void EncGOP::initPicture( Picture* pic )
 {
+  auto& trace=pic->m_picShared->m_liveTrace.data;
+  if(trace.input_us)trace.gop_enter_us=liveTraceNow();
   pic->encTime.startTimer();
 
   pic->TLayer = pic->gopEntry->m_temporalId;
@@ -326,6 +328,10 @@ void EncGOP::waitForFreeEncoders()
 void EncGOP::processPictures( const PicList& picList, AccessUnitList& auList, PicList& doneList, PicList& freeList )
 {
   CHECK( picList.empty(), "empty input picture list given" );
+  for(auto pic:picList) {
+    auto& trace=pic->m_picShared->m_liveTrace.data;
+    if(trace.input_us&&!trace.dispatch_us)trace.gop_visits++;
+  }
 
   // create list of pictures ordered in coding order and ready to be encoded
   xInitPicsInCodingOrder( picList );
@@ -389,12 +395,27 @@ void EncGOP::xProcessPictures( AccessUnitList& auList, PicList& doneList )
         const std::list<Picture *>* rcUpdateList = &m_rcUpdateList;
         const VVEncCfg* encCfg = m_pcEncCfg;
         auto picItr            = find_if( m_procList.begin(), m_procList.end(), [encCfg, rcUpdateList]( auto pic ) {
-          return ( encCfg->m_ifp || pic->slices[ 0 ]->checkAllRefPicsReconstructed() )
-            && ( !encCfg->m_alf || ( !pic->refApsGlobal || pic->refApsGlobal->initalized ) )
-            && ( !encCfg->m_rateCap || !encCfg->m_maxParallelFrames || !pic->isSceneCutGOP || (!rcUpdateList->front()->isSceneCutCheckAdjQP && !rcUpdateList->front()->gopEntry->m_isStartOfGop ) )
-            ; } );
+          auto& t=pic->m_picShared->m_liveTrace.data;
+          if(!(encCfg->m_ifp || pic->slices[0]->checkAllRefPicsReconstructed())) {
+            if(t.input_us)t.gop_reference_blocks++;return false;
+          }
+          if(!(!encCfg->m_alf || !pic->refApsGlobal || pic->refApsGlobal->initalized)) {
+            if(t.input_us)t.gop_aps_blocks++;return false;
+          }
+          if(!(!encCfg->m_rateCap || !encCfg->m_maxParallelFrames || !pic->isSceneCutGOP ||
+               (!rcUpdateList->front()->isSceneCutCheckAdjQP && !rcUpdateList->front()->gopEntry->m_isStartOfGop))) {
+            if(t.input_us)t.gop_rc_blocks++;return false;
+          }
+          return true; } );
 
         const bool nextPicReady = picItr != m_procList.end();
+        // Counters describe observed rejected checks, not durations. Do not
+        // re-run reference readiness or alter the existing selection lambda.
+        for(auto candidate:m_procList) {
+          auto& t=candidate->m_picShared->m_liveTrace.data;
+          if(!t.input_us)continue;
+          if(m_freePicEncoderList.empty())t.gop_encoder_blocks++;
+        }
 
         // check at least one picture and one pic encoder ready
         if( m_freePicEncoderList.empty() || ! nextPicReady )
@@ -428,6 +449,7 @@ void EncGOP::xProcessPictures( AccessUnitList& auList, PicList& doneList )
             // check the RC final pass requirement for availability of preprocessed pictures (GOP + 1)
             if( m_pcRateCtrl->lastPOCInCache() <= pic->poc && ! pic->isFlush )
             {
+              if(pic->m_picShared->m_liveTrace.data.input_us)pic->m_picShared->m_liveTrace.data.gop_rc_blocks++;
               break;
             }
             m_pcRateCtrl->processFirstPassData( pic->isFlush, pic->poc );
@@ -589,7 +611,7 @@ void EncGOP::xEncodePicture( Picture* pic, EncPicture* picEncoder )
 {
   auto& trace=pic->m_picShared->m_liveTrace.data;
   int64_t traceCpu=0;
-  if(trace.input_us){trace.dispatch_us=liveTraceNow();traceCpu=liveTraceCpu();}
+  if(trace.input_us){trace.gop_previous_done_us=m_liveLastDoneUs.load();trace.dispatch_us=liveTraceNow();traceCpu=liveTraceCpu();}
   // first pass temporal down-sampling
   if( ( ! m_pcRateCtrl->rcIsFinalPass || m_isPreAnalysis ) && pic->gopEntry->m_skipFirstPass )
   {
@@ -660,7 +682,7 @@ void EncGOP::xEncodePicture( Picture* pic, EncPicture* picEncoder )
       if(trace.input_us){trace.finalize_end_us=liveTraceNow();trace.finalize_cpu_us=liveTraceCpu()-cpu;}
       {
         std::lock_guard<std::mutex> lock( param->gopEncoder->m_gopEncMutex );
-        if(trace.input_us)trace.reconstructed_us=liveTraceNow();
+        if(trace.input_us){trace.reconstructed_us=liveTraceNow();param->gopEncoder->m_liveLastDoneUs.store(trace.reconstructed_us);}
         param->pic->isReconstructed = true;
         if( param->pic->picApsGlobal ) param->pic->picApsGlobal->initalized = true;
         param->gopEncoder->m_freePicEncoderList.push_back( param->picEncoder );
@@ -676,7 +698,7 @@ void EncGOP::xEncodePicture( Picture* pic, EncPicture* picEncoder )
   {
     int64_t cpu=0;if(trace.input_us){trace.ctu_done_us=pic->m_picShared->m_liveTrace.last.load();trace.finalize_begin_us=liveTraceNow();cpu=liveTraceCpu();}
     picEncoder->finalizePicture( *pic );
-    if(trace.input_us){trace.finalize_end_us=liveTraceNow();trace.finalize_cpu_us=liveTraceCpu()-cpu;trace.reconstructed_us=liveTraceNow();}
+    if(trace.input_us){trace.finalize_end_us=liveTraceNow();trace.finalize_cpu_us=liveTraceCpu()-cpu;trace.reconstructed_us=liveTraceNow();m_liveLastDoneUs.store(trace.reconstructed_us);}
     pic->isReconstructed = true;
     if( pic->picApsGlobal ) pic->picApsGlobal->initalized = true;
     m_freePicEncoderList.push_back( picEncoder );
@@ -1471,7 +1493,10 @@ void EncGOP::xInitPicsInCodingOrder( const PicList& picList )
     // otherwise a temporarily unready picture remains in flight on reentry.
     if( m_pcEncCfg->m_livePtsGop && m_pcEncCfg->m_RCTargetBitrate > 0 && m_pcEncCfg->m_LookAhead
         && pic->gopEntry->m_isStartOfGop && !pic->isFlush && m_pcRateCtrl->lastPOCInCache() <= pic->poc )
+    {
+      if(pic->m_picShared->m_liveTrace.data.input_us)pic->m_picShared->m_liveTrace.data.gop_analysis_blocks++;
       break;
+    }
 
     // update visual activity for last start of GOP picture
     // this may have been changed in the shared picture data due to fixStartOfLastGop()
@@ -1494,16 +1519,22 @@ void EncGOP::xInitPicsInCodingOrder( const PicList& picList )
       else
       {
         // rate cap: wait until the condition is met
+        if(pic->m_picShared->m_liveTrace.data.input_us)pic->m_picShared->m_liveTrace.data.gop_ratecap_blocks++;
         break;
       }
     }
 
     // continue with next pic in increasing coding number order
     if( pic->gopEntry->m_codingNum != m_lastCodingNum + 1 && ! picList.back()->isFlush )
+    {
+      if(pic->m_picShared->m_liveTrace.data.input_us)pic->m_picShared->m_liveTrace.data.gop_order_blocks++;
       break;
+    }
 
     CHECK( m_lastCodingNum == -1 && ! pic->gopEntry->m_isStartOfIntra, "encoding should start with an I-Slice" );
 
+    auto& trace=pic->m_picShared->m_liveTrace.data;
+    int64_t cpu=0;if(trace.input_us){trace.gop_init_begin_us=liveTraceNow();cpu=liveTraceCpu();}
     xForceScc( *pic );
 
     // initialize slice header
@@ -1522,6 +1553,7 @@ void EncGOP::xInitPicsInCodingOrder( const PicList& picList )
 
     // continue with next picture
     m_lastCodingNum = pic->gopEntry->m_codingNum;
+    if(trace.input_us){trace.gop_init_end_us=liveTraceNow();trace.gop_init_cpu_us=liveTraceCpu()-cpu;}
 
     // in single threading initialize only one picture per encoding loop
     if( m_pcEncCfg->m_maxParallelFrames <= 0 )
