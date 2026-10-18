@@ -2084,7 +2084,7 @@ static bool checkCfgParameter( vvenc_config *c )
   vvenc_confirmParameter( c, !c->m_LookAhead && c->m_RCNumPasses == 1 && c->m_RCTargetBitrate > 0, "Look-ahead encoding must be used with one-pass rate control" );
   vvenc_confirmParameter( c, c->m_LookAhead && c->m_RCTargetBitrate == 0,   "Look-ahead encoding is not supported when rate control is disabled" );
   vvenc_confirmParameter( c, c->m_liveNative8Ref != 0 && c->m_liveNative8Ref != 1, "LiveNative8Ref must be 0 or 1" );
-  vvenc_confirmParameter( c, c->m_liveNative8Ref && (!c->m_liveCqfPoll || c->m_ifpLines || c->m_internalBitDepth[0]!=8 || c->m_internalBitDepth[1]!=8), "LiveNative8Ref requires serial live CQF, internal 8-bit and no IFP" );
+  vvenc_confirmParameter( c, c->m_liveNative8Ref && (!c->m_liveCqfPoll || c->m_maxParallelFrames || c->m_internalBitDepth[0]!=8 || c->m_internalBitDepth[1]!=8), "LiveNative8Ref requires serial live CQF and internal 8-bit" );
   vvenc_confirmParameter( c, c->m_liveCqfPoll && (!c->m_livePtsGop || c->m_RCTargetBitrate || c->m_LookAhead || c->m_maxParallelFrames || c->m_vvencMCTF.MCTFFutureReference), "LiveCqfPoll requires serial live PTS CQF without future MCTF or RC lookahead" );
 
   vvenc_confirmParameter(c, !((c->m_level==VVENC_LEVEL1)

@@ -515,7 +515,8 @@ void Picture::extendPicBorder()
 }
 
 // Called by EncGOP only after all CTU/filter/border tasks and finalizePicture complete,
-// before publishing isReconstructed. LiveNative8Ref excludes frame/line parallelism.
+// before publishing isReconstructed and returning the sole picture encoder.
+// Internal line scheduling can be enabled; a second picture cannot overlap.
 void Picture::prepareReference8()
 {
   if(m_native8Reference && !m_reference8[0].data()) {
@@ -532,9 +533,10 @@ void Picture::prepareReference8()
 
 CSampleBuf8 Picture::getRecoBuf8(const CompArea& blk) const
 {
-  if(!m_native8Reference || !isReconstructed.load()) return CSampleBuf8();
+  if(!m_native8Reference) return CSampleBuf8();
+  CHECK(!isReconstructed.load(), "byte reference read before reconstruction publication");
   const Sample8* base=m_reference8[blk.compID].data();
-  if(!base) return CSampleBuf8();
+  CHECK(!base, "missing published byte reference plane");
   const int stride=getRecoBufStride(blk.compID);
   return CSampleBuf8(base+ptrdiff_t(blk.y)*stride+blk.x,stride,blk.width,blk.height);
 }

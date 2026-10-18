@@ -320,7 +320,7 @@ Distortion RdCost::xGetSAD8Byte(const DistParam& dp)
 {
   CHECK(!dp.org8 || !dp.ref8 || !dp.ref16Origin || dp.bitDepth!=8 || dp.applyWeight, "invalid byte SAD");
   return sad8Scalar(dp.org8,dp.org.width,dp.ref8+(dp.cur.buf-dp.ref16Origin),
-                    dp.cur.stride,dp.org.width,dp.org.height,dp.subShift);
+                    dp.cur.stride,dp.org.width,dp.org.height,dp.subShift,dp.maximumDistortionForEarlyExit);
 }
 
 Distortion RdCost::xGetSAD( const DistParam& rcDtParam )

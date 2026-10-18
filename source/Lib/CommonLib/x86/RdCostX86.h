@@ -63,7 +63,7 @@ template<X86_VEXT vext>
 Distortion RdCost::xGetSAD8ByteSIMD(const DistParam& dp)
 {
   return sad8X86<(vext>=AVX2)>(dp.org8,dp.org.width,dp.ref8+(dp.cur.buf-dp.ref16Origin),
-                              dp.cur.stride,dp.org.width,dp.org.height,dp.subShift);
+                              dp.cur.stride,dp.org.width,dp.org.height,dp.subShift,dp.maximumDistortionForEarlyExit);
 }
 
 typedef Pel Torg;

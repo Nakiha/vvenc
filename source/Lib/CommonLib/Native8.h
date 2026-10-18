@@ -40,10 +40,11 @@ public:
   }
 };
 inline uint64_t sad8Scalar(const Sample8* a, ptrdiff_t as, const Sample8* b, ptrdiff_t bs,
-                           int w, int h, int subShift) {
+                           int w, int h, int subShift, uint64_t maximum=UINT64_MAX) {
   uint64_t sum=0; const int step=1<<subShift;
   for(int y=0;y<h;y+=step) {
     for(int x=0;x<w;x++) sum+=unsigned(a[x]>b[x]?a[x]-b[x]:b[x]-a[x]);
+    if(w>=64 && (sum<<subShift)>maximum) return sum<<subShift;
     a+=as*step;b+=bs*step;
   }
   return sum<<subShift;
