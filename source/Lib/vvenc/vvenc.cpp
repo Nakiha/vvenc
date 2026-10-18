@@ -87,6 +87,7 @@ VVENC_DECL void vvenc_YUVBuffer_default(vvencYUVBuffer *yuvBuffer )
   for( int i = 0; i < 3; i ++ )
   {
     yuvBuffer->planes[i].ptr     = NULL;
+    yuvBuffer->planes8[i]        = NULL;
     yuvBuffer->planes[i].width   = 0;
     yuvBuffer->planes[i].height  = 0;
     yuvBuffer->planes[i].stride  = 0;
@@ -94,6 +95,7 @@ VVENC_DECL void vvenc_YUVBuffer_default(vvencYUVBuffer *yuvBuffer )
   yuvBuffer->sequenceNumber  = 0;
   yuvBuffer->cts             = 0;
   yuvBuffer->ctsValid        = false;
+  yuvBuffer->liveTrace       = false;
   yuvBuffer->liveQpOffset = 0;
   yuvBuffer->forceIntra      = false;
 }

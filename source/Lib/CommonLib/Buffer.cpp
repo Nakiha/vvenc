@@ -1294,19 +1294,28 @@ void copyPadToPelUnitBuf( PelUnitBuf pelUnitBuf, const vvencYUVBuffer& yuvBuffer
   for ( int i = 0; i < numComp; i++ )
   {
     const vvencYUVPlane& src = yuvBuffer.planes[ i ];
-    CHECK( src.ptr == nullptr, "yuvBuffer not setup" );
+    const uint8_t* bytes = yuvBuffer.planes8[i];
+    CHECK( src.ptr == nullptr && bytes == nullptr, "yuvBuffer not setup" );
     PelBuf& dest = pelUnitBuf.bufs[i];
     CHECK( dest.buf == nullptr, "yuvBuffer not setup" );
 
     if (dest.width < src.width)
     {
+      CHECK( bytes != nullptr, "packed byte input cannot use the legacy downsample path" );
       downsampleYuv(dest, src, 2);
     }
     else
     {
       for (int y = 0; y < src.height; y++)
       {
-        ::memcpy(dest.buf + y * dest.stride, src.ptr + y * src.stride, src.width * sizeof(int16_t));
+        if( bytes )
+        {
+          // One zero-extension into owned working pixels. No input mutation,
+          // full-frame temporary, bit-depth shift, or borrowed lifetime.
+          std::copy_n(bytes + y * src.stride, src.width, dest.buf + y * dest.stride);
+        }
+        else
+          ::memcpy(dest.buf + y * dest.stride, src.ptr + y * src.stride, src.width * sizeof(int16_t));
 
         // pad right if required
         for (int x = src.width; x < dest.width; x++)

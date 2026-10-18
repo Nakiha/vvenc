@@ -287,7 +287,29 @@ int VVEncImpl::encode( vvencYUVBuffer* pcYUVBuffer, vvencAccessUnit* pcAccessUni
         (pcYUVBuffer->liveQpOffset && !m_cVVEncCfg.m_liveCqfPoll)) return VVENC_ERR_PARAMETER;
     if( m_eState == INTERNAL_STATE_FLUSHING ) { m_cErrorString = "encoder already received flush indication, please reinit."; return VVENC_ERR_RESTART_REQUIRED; }
 
-    if( pcYUVBuffer->planes[0].ptr == nullptr )
+    const bool byteInput = pcYUVBuffer->planes8[0] || pcYUVBuffer->planes8[1] || pcYUVBuffer->planes8[2];
+    if( byteInput )
+    {
+      if( !m_cVVEncCfg.m_liveCqfPoll || m_cVVEncCfg.m_inputBitDepth[0] != 8 || m_cVVEncCfg.m_internalBitDepth[0] != 8 )
+      {
+        m_cErrorString = "Packed byte input requires live serial CQF and input/internal depth 8";
+        return VVENC_ERR_PARAMETER;
+      }
+      const int comps = m_cVVEncCfg.m_internChromaFormat == VVENC_CHROMA_400 ? 1 : 3;
+      for( int comp = 0; comp < comps; ++comp )
+      {
+        const vvencYUVPlane& plane = pcYUVBuffer->planes[comp];
+        if( !pcYUVBuffer->planes8[comp] || plane.ptr ||
+            plane.width != vvenc_get_width_of_component(m_cVVEncCfg.m_internChromaFormat, m_cVVEncCfg.m_SourceWidth, comp) ||
+            plane.height != vvenc_get_height_of_component(m_cVVEncCfg.m_internChromaFormat, m_cVVEncCfg.m_SourceHeight, comp) ||
+            plane.stride < plane.width )
+        {
+          m_cErrorString = "Invalid packed byte plane, dimensions, stride or mixed legacy pointers";
+          return VVENC_ERR_PARAMETER;
+        }
+      }
+    }
+    if( !byteInput && pcYUVBuffer->planes[0].ptr == nullptr )
     {
       m_cErrorString = "InputPicture: invalid input buffers";
       return VVENC_ERR_UNSPECIFIED;
@@ -295,8 +317,8 @@ int VVEncImpl::encode( vvencYUVBuffer* pcYUVBuffer, vvencAccessUnit* pcAccessUni
 
     if( m_cVVEncCfg.m_internChromaFormat != VVENC_CHROMA_400 )
     {
-      if( pcYUVBuffer->planes[1].ptr == nullptr ||
-          pcYUVBuffer->planes[2].ptr == nullptr )
+      if( !byteInput && (pcYUVBuffer->planes[1].ptr == nullptr ||
+          pcYUVBuffer->planes[2].ptr == nullptr) )
       {
         m_cErrorString = "InputPicture: invalid input buffers for chroma";
         return VVENC_ERR_UNSPECIFIED;
@@ -579,6 +601,8 @@ int VVEncImpl::printSummary() const
 bool VVEncImpl::xConvertVerifyYUVBuffer( vvencYUVBuffer* pcYUVBuffer )
 {
   if( pcYUVBuffer == nullptr ){ return false; }
+  // The byte-plane contract and dimensions were checked at the API boundary.
+  if( pcYUVBuffer->planes8[0] ) return true;
 
   bool conv8bit = false;
   if ( m_cVVEncCfg.m_inputBitDepth[0] == 10 && m_cVVEncCfg.m_internalBitDepth[0] == 8 &&

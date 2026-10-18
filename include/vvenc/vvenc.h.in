@@ -131,6 +131,7 @@ typedef struct vvencYUVPlane
 /*
   The struct vvencYUVBuffer contains the data and attributes to hand over the uncompressed input picture and metadata related to the picture.
 */
+#define VVENC_LIVE_INPUT8_VERSION 1
 #define VVENC_LIVE_FRAME_TRACE_VERSION 2
 #define VVENC_LIVE_FRAME_TRACE_FIELDS(X) X(input_us) \
     X(group_last_input_us) \
@@ -179,7 +180,12 @@ typedef struct vvencLiveFrameTrace {
 
 typedef struct vvencYUVBuffer
 {
-  vvencYUVPlane planes[ 3 ];           // plane buffer for 3 components (yuv)
+  vvencYUVPlane planes[ 3 ];           // plane dimensions and sample strides
+  // Non-owning read-only byte input, live serial CQF with input/internal depth 8.
+  // All active planes8 must be set and all planes[].ptr must be NULL. Strides
+  // are bytes in this mode. The library copies before returning; never free
+  // these pointers with vvenc_YUVBuffer_free_buffer. NULL preserves legacy behavior; matching fork ABI is required.
+  const uint8_t* planes8[ 3 ];
   uint64_t      sequenceNumber;        // sequence number of the picture
   int64_t       cts;                   // composition time stamp in TicksPerSecond
   bool          ctsValid;              // composition time stamp valid flag (true: valid, false: CTS not set)
