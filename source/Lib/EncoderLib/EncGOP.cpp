@@ -397,14 +397,17 @@ void EncGOP::xProcessPictures( AccessUnitList& auList, PicList& doneList )
         auto picItr            = find_if( m_procList.begin(), m_procList.end(), [encCfg, rcUpdateList]( auto pic ) {
           auto& t=pic->m_picShared->m_liveTrace.data;
           if(!(encCfg->m_ifp || pic->slices[0]->checkAllRefPicsReconstructed())) {
-            if(t.input_us)t.gop_reference_blocks++;return false;
+            if(t.input_us)t.gop_reference_blocks++;
+            return false;
           }
           if(!(!encCfg->m_alf || !pic->refApsGlobal || pic->refApsGlobal->initalized)) {
-            if(t.input_us)t.gop_aps_blocks++;return false;
+            if(t.input_us)t.gop_aps_blocks++;
+            return false;
           }
           if(!(!encCfg->m_rateCap || !encCfg->m_maxParallelFrames || !pic->isSceneCutGOP ||
                (!rcUpdateList->front()->isSceneCutCheckAdjQP && !rcUpdateList->front()->gopEntry->m_isStartOfGop))) {
-            if(t.input_us)t.gop_rc_blocks++;return false;
+            if(t.input_us)t.gop_rc_blocks++;
+            return false;
           }
           return true; } );
 
