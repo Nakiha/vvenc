@@ -290,7 +290,10 @@ int VVEncImpl::encode( vvencYUVBuffer* pcYUVBuffer, vvencAccessUnit* pcAccessUni
     const bool byteInput = pcYUVBuffer->planes8[0] || pcYUVBuffer->planes8[1] || pcYUVBuffer->planes8[2];
     if( byteInput )
     {
-      if( !m_cVVEncCfg.m_liveCqfPoll || m_cVVEncCfg.m_inputBitDepth[0] != 8 || m_cVVEncCfg.m_internalBitDepth[0] != 8 )
+      const bool chroma8 = m_cVVEncCfg.m_internChromaFormat == VVENC_CHROMA_400 ||
+        (m_cVVEncCfg.m_inputBitDepth[1] == 8 && m_cVVEncCfg.m_internalBitDepth[1] == 8 && m_cVVEncCfg.m_MSBExtendedBitDepth[1] == 8);
+      if( !m_cVVEncCfg.m_liveCqfPoll || m_cVVEncCfg.m_inputBitDepth[0] != 8 || m_cVVEncCfg.m_internalBitDepth[0] != 8 ||
+          m_cVVEncCfg.m_MSBExtendedBitDepth[0] != 8 || !chroma8 )
       {
         m_cErrorString = "Packed byte input requires live serial CQF and input/internal depth 8";
         return VVENC_ERR_PARAMETER;
