@@ -46,6 +46,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #pragma once
 
 #include "CommonDefX86.h"
+#include "Native8X86.h"
 #include "Rom.h"
 #include "RdCost.h"
 
@@ -57,6 +58,13 @@ POSSIBILITY OF SUCH DAMAGE.
 //! \{
 
 namespace vvenc {
+
+template<X86_VEXT vext>
+Distortion RdCost::xGetSAD8ByteSIMD(const DistParam& dp)
+{
+  return sad8X86<(vext>=AVX2)>(dp.org8,dp.org.width,dp.ref8+(dp.cur.buf-dp.ref16Origin),
+                              dp.cur.stride,dp.org.width,dp.org.height,dp.subShift);
+}
 
 typedef Pel Torg;
 typedef Pel Tcur;
@@ -3574,6 +3582,7 @@ void RdCost::_initRdCostX86()
   m_afpDistortFunc[0][DF_SSE64  ] = xGetSSE_NxN_SIMD<64, vext>;
   m_afpDistortFunc[0][DF_SSE128]  = xGetSSE_NxN_SIMD<128, vext>;
 
+  m_sad8 = xGetSAD8ByteSIMD<vext>;
   m_afpDistortFunc[0][DF_SAD    ] = xGetSAD_SIMD<vext>;
 //m_afpDistortFunc[0][DF_SAD2   ] = xGetSAD_SIMD<vext>;
   m_afpDistortFunc[0][DF_SAD4   ] = xGetSAD_NxN_SIMD<4,  vext>;

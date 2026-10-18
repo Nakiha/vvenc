@@ -84,6 +84,7 @@ void RdCost::setLambda( double dLambda, const BitDepths &bitDepths )
 // Initialize Function Pointer by [eDFunc]
 void RdCost::create( bool enableOpt )
 {
+  m_sad8 = xGetSAD8Byte;
   m_signalType                 = RESHAPE_SIGNAL_NULL;
   m_chromaWeight               = 1.0;
   m_lumaBD                     = 10;
@@ -164,6 +165,7 @@ static Distortion xMeasurePredSearchSpaceInterceptor( const DistParam& dp )
 #endif
 void RdCost::setDistParam( DistParam &rcDP, const CPelBuf& org, const Pel* piRefY, int iRefStride, int bitDepth, ComponentID compID, int subShiftMode, int useHadamard )
 {
+  rcDP.org8 = nullptr; rcDP.ref8 = nullptr; rcDP.ref16Origin = nullptr;
   rcDP.bitDepth   = bitDepth;
   rcDP.compID     = compID;
 
@@ -313,6 +315,13 @@ Distortion RdCost::getDistPart( const CPelBuf& org, const CPelBuf& cur, int bitD
 // --------------------------------------------------------------------------------------------------------------------
 // SAD
 // --------------------------------------------------------------------------------------------------------------------
+
+Distortion RdCost::xGetSAD8Byte(const DistParam& dp)
+{
+  CHECK(!dp.org8 || !dp.ref8 || !dp.ref16Origin || dp.bitDepth!=8 || dp.applyWeight, "invalid byte SAD");
+  return sad8Scalar(dp.org8,dp.org.width,dp.ref8+(dp.cur.buf-dp.ref16Origin),
+                    dp.cur.stride,dp.org.width,dp.org.height,dp.subShift);
+}
 
 Distortion RdCost::xGetSAD( const DistParam& rcDtParam )
 {

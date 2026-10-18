@@ -245,6 +245,7 @@ void EncGOP::setRecYUVBufferCallback( void* ctx, std::function<void( void*, vven
 void EncGOP::initPicture( Picture* pic )
 {
   auto& trace=pic->m_picShared->m_liveTrace.data;
+  pic->native8Trace=trace.input_us!=0;
   if(trace.input_us)trace.gop_enter_us=liveTraceNow();
   pic->encTime.startTimer();
 
@@ -682,6 +683,7 @@ void EncGOP::xEncodePicture( Picture* pic, EncPicture* picEncoder )
       auto& trace=param->pic->m_picShared->m_liveTrace.data;
       int64_t cpu=0;if(trace.input_us){trace.ctu_done_us=param->pic->m_picShared->m_liveTrace.last.load();trace.finalize_begin_us=liveTraceNow();cpu=liveTraceCpu();}
       param->picEncoder->finalizePicture( *param->pic );
+      param->pic->prepareReference8();
       if(trace.input_us){trace.finalize_end_us=liveTraceNow();trace.finalize_cpu_us=liveTraceCpu()-cpu;}
       {
         std::lock_guard<std::mutex> lock( param->gopEncoder->m_gopEncMutex );
@@ -701,6 +703,7 @@ void EncGOP::xEncodePicture( Picture* pic, EncPicture* picEncoder )
   {
     int64_t cpu=0;if(trace.input_us){trace.ctu_done_us=pic->m_picShared->m_liveTrace.last.load();trace.finalize_begin_us=liveTraceNow();cpu=liveTraceCpu();}
     picEncoder->finalizePicture( *pic );
+    pic->prepareReference8();
     if(trace.input_us){trace.finalize_end_us=liveTraceNow();trace.finalize_cpu_us=liveTraceCpu()-cpu;trace.reconstructed_us=liveTraceNow();m_liveLastDoneUs.store(trace.reconstructed_us);}
     pic->isReconstructed = true;
     if( pic->picApsGlobal ) pic->picApsGlobal->initalized = true;
@@ -2547,6 +2550,8 @@ void EncGOP::xWritePicture( Picture& pic, AccessUnitList& au, bool isEncodeLtRef
   if(pic.m_picShared->m_liveTrace.data.input_us) {
     pic.m_picShared->m_liveTrace.data.au_us=liveTraceNow();
     au.liveTrace=pic.m_picShared->m_liveTrace.snapshot();
+    au.liveTrace.byte_reference_pack_us=pic.native8PackUs;
+    au.liveTrace.byte_me_blocks=pic.native8MeBlocks.load(std::memory_order_relaxed);
   }
 }
 

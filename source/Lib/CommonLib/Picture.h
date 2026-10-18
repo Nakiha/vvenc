@@ -139,6 +139,9 @@ struct PicApsGlobal{
 struct Picture : public UnitArea
 {
   uint32_t margin;
+  bool native8Trace = false;
+  int64_t native8PackUs = 0;
+  std::atomic<int64_t> native8MeBlocks{0};
   Picture();
 
   void create( ChromaFormat _chromaFormat, const Size& size, unsigned _maxCUSize, unsigned _margin, bool _decoder );
@@ -153,6 +156,8 @@ struct Picture : public UnitArea
   void destroyTempBuffers();
 
   void extendPicBorder();
+  void prepareReference8();
+  CSampleBuf8 getRecoBuf8(const CompArea& blk) const;
   void finalInit( const VPS& vps, const SPS& sps, const PPS& pps, PicHeader* picHeader, XUCache& unitCache, std::mutex* mutex, APS** alfAps, APS* lmcsAps );
   void setSccFlags( const VVEncCfg* encCfg );
 
@@ -248,6 +253,8 @@ public:
 
   PicShared*                    m_picShared;
 
+  bool                          m_native8Reference = false;
+  ReferencePlane8               m_reference8[MAX_NUM_COMP];
   PelStorage                    m_picBufs[ NUM_PIC_TYPES ];
   PelStorage*                   m_sharedBufs[ NUM_PIC_TYPES ];
   PelStorage*                   m_bufsOrigPrev[ NUM_QPA_PREV_FRAMES ];

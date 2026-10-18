@@ -84,6 +84,9 @@ class DistParam
 public:
   CPelBuf               org;
   CPelBuf               cur;
+  const Sample8*        org8 = nullptr;
+  const Sample8*        ref8 = nullptr;
+  const Pel*            ref16Origin = nullptr;
   FpDistFunc            distFunc  = nullptr;
   FpDistFuncX5          dmvrSadX5 = nullptr;
 #if ENABLE_MEASURE_SEARCH_SPACE
@@ -148,6 +151,11 @@ public:
   virtual ~RdCost();
 
   void          create( bool enableOpt = true );
+  FpDistFunc    m_sad8 = nullptr;
+  static Distortion xGetSAD8Byte(const DistParam& dp);
+#if defined(TARGET_SIMD_X86) && ENABLE_SIMD_OPT_DIST
+  template<X86_VEXT vext> static Distortion xGetSAD8ByteSIMD(const DistParam& dp);
+#endif
 
 #if defined(TARGET_SIMD_X86)  && ENABLE_SIMD_OPT_DIST
   void          initRdCostX86();

@@ -225,6 +225,9 @@ void Picture::reset()
   isInitDone           = false;
   isReconstructed      = false;
   isBorderExtended     = false;
+  m_native8Reference    = false;
+  native8Trace=false; native8PackUs=0; native8MeBlocks.store(0,std::memory_order_relaxed);
+  for(auto& plane : m_reference8) plane.reset();
   isReferenced         = true;
   isNeededForOutput    = true;
   isFinished           = false;
@@ -266,6 +269,7 @@ void Picture::reset()
 
 void Picture::destroy( bool bPicHeader )
 {
+  for(auto& plane : m_reference8) plane.destroy();
   for (uint32_t t = 0; t < NUM_PIC_TYPES; t++)
   {
     m_picBufs[  t ].destroy();
@@ -404,6 +408,7 @@ void Picture::finalInit( const VPS& _vps, const SPS& sps, const PPS& pps, PicHea
 
 void Picture::setSccFlags( const VVEncCfg* encCfg )
 {
+  m_native8Reference = encCfg->m_liveNative8Ref != 0;
   useME      = encCfg->m_motionEstimationSearchMethodSCC > 0                          && isSccStrong;
   useTS      = encCfg->m_TS == 1                || ( encCfg->m_TS == 2                && isSccWeak );
   useBDPCM   = encCfg->m_useBDPCM == 1          || ( encCfg->m_useBDPCM == 2          && isSccWeak );
@@ -505,7 +510,33 @@ void Picture::extendPicBorder()
     }
   }
 
+  prepareReference8();
   isBorderExtended = true;
+}
+
+// Called by EncGOP only after all CTU/filter/border tasks and finalizePicture complete,
+// before publishing isReconstructed. LiveNative8Ref excludes frame/line parallelism.
+void Picture::prepareReference8()
+{
+  if(m_native8Reference && !m_reference8[0].data()) {
+    const auto started=native8Trace?std::chrono::steady_clock::now():std::chrono::steady_clock::time_point{};
+    for(int c=0;c<getNumberValidComponents(cs->area.chromaFormat);c++) {
+      const ComponentID id=ComponentID(c); const CPelBuf p=getRecoBuf(id);
+      m_reference8[c].assign(p.buf,p.stride,p.width,p.height,
+        margin>>getComponentScaleX(id,cs->area.chromaFormat),
+        margin>>getComponentScaleY(id,cs->area.chromaFormat));
+    }
+    if(native8Trace)native8PackUs=std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-started).count();
+  }
+}
+
+CSampleBuf8 Picture::getRecoBuf8(const CompArea& blk) const
+{
+  if(!m_native8Reference || !isReconstructed.load()) return CSampleBuf8();
+  const Sample8* base=m_reference8[blk.compID].data();
+  if(!base) return CSampleBuf8();
+  const int stride=getRecoBufStride(blk.compID);
+  return CSampleBuf8(base+ptrdiff_t(blk.y)*stride+blk.x,stride,blk.width,blk.height);
 }
 
 PelUnitBuf Picture::getPicBuf( const UnitArea& unit, const PictureType type )

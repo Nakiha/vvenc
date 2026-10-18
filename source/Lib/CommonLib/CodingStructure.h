@@ -258,10 +258,10 @@ public:
          PelUnitBuf   getPredBuf(const UnitArea& unit)          { return getBuf(unit, PIC_PREDICTION); }
   const CPelUnitBuf   getPredBuf(const UnitArea& unit)    const { return getBuf(unit, PIC_PREDICTION); }
 
-         PelBuf       getResiBuf(const CompArea& blk)           { return getBuf(blk,  PIC_RESIDUAL); }
-  const CPelBuf       getResiBuf(const CompArea& blk)     const { return getBuf(blk,  PIC_RESIDUAL); }
-         PelUnitBuf   getResiBuf(const UnitArea& unit)          { return getBuf(unit, PIC_RESIDUAL); }
-  const CPelUnitBuf   getResiBuf(const UnitArea& unit)    const { return getBuf(unit, PIC_RESIDUAL); }
+         ResiBuf       getResiBuf(const CompArea& blk)           { return getBuf(blk,  PIC_RESIDUAL); }
+  const CResiBuf       getResiBuf(const CompArea& blk)     const { return getBuf(blk,  PIC_RESIDUAL); }
+         ResiUnitBuf   getResiBuf(const UnitArea& unit)          { return getBuf(unit, PIC_RESIDUAL); }
+  const CResiUnitBuf   getResiBuf(const UnitArea& unit)    const { return getBuf(unit, PIC_RESIDUAL); }
 
          PelBuf       getRecoBuf(const CompArea& blk)           { return getBuf(blk,  PIC_RECONSTRUCTION); }
   const CPelBuf       getRecoBuf(const CompArea& blk)     const { return getBuf(blk,  PIC_RECONSTRUCTION); }
@@ -298,10 +298,10 @@ public:
   const CPelUnitBuf   getPredBuf()                        const { return m_pred; }
 
   // resi buffer
-         PelBuf       getResiBuf(const ComponentID compID)      { return m_resi.get(compID); }
-  const CPelBuf       getResiBuf(const ComponentID compID)const { return m_resi.get(compID); }
-         PelUnitBuf&  getResiBuf()                              { return m_resi; }
-  const CPelUnitBuf   getResiBuf()                        const { return m_resi; }
+         ResiBuf       getResiBuf(const ComponentID compID)      { return m_resi.get(compID); }
+  const CResiBuf       getResiBuf(const ComponentID compID)const { return m_resi.get(compID); }
+         ResiUnitBuf&  getResiBuf()                              { return m_resi; }
+  const CResiUnitBuf   getResiBuf()                        const { return m_resi; }
 
   // reco buffer
   const CPelBuf       getRecoBuf(const ComponentID compID)const { return m_reco.get(compID); }

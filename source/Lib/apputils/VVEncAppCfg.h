@@ -689,6 +689,7 @@ int parse( int argc, char* argv[], vvenc_config* c, std::ostream& rcOstr )
                                                                                                              "                    idr_no_radl: IDR, without leading pictures, use for DASH)")
     ("refreshsec,-rs",                                  c->m_IntraPeriodSec,                                 "intra period/refresh in seconds")
     ("LivePtsGop",                                      c->m_livePtsGop,                                     "fork: schedule CRA on the CTS time grid; GOP4 live profile only")
+    ("LiveNative8Ref", c->m_liveNative8Ref, "fork: byte reference buffers and integer ME SAD, serial live 8-bit only")
     ("intraperiod,-ip",                                 c->m_IntraPeriod,                                    "intra period in frames (0: specify intra period in seconds instead, see -refreshsec)")
     ;
   }
@@ -707,6 +708,7 @@ int parse( int argc, char* argv[], vvenc_config* c, std::ostream& rcOstr )
     ("IntraPeriod,-ip",                                c->m_IntraPeriod,                                     "Intra period in frames (0: use intra period in seconds (refreshsec), else: n*gopsize)")
     ("RefreshSec,-rs",                                 c->m_IntraPeriodSec,                                  "Intra period/refresh in seconds")
     ("LivePtsGop",                                     c->m_livePtsGop,                                      "fork: schedule CRA on the CTS time grid; GOP4 live profile only")
+    ("LiveNative8Ref", c->m_liveNative8Ref, "fork: byte reference buffers and integer ME SAD, serial live 8-bit only")
     ("DecodingRefreshType,-dr",                        toDecRefreshType,                                     "intra refresh type (idr, cra, cra_cre: CRA, constrained RASL picture encoding, none, rpsei: Recovery Point SEI,\n"
                                                                                                              "                    idr_no_radl: IDR, without leading pictures, use for DASH)")
     ("GOPSize,g",                                      c->m_GOPSize,                                         "GOP size of temporal structure (16,32)")

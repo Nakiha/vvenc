@@ -452,6 +452,8 @@ private:
   {
     SearchRange     searchRange;
     const CPelBuf*  pcPatternKey;
+    const Sample8*  ref8 = nullptr;
+    const Sample8*  org8 = nullptr;
     const Pel*      piRefY;
     int             iRefStride;
     int             iBestX;
@@ -465,6 +467,9 @@ private:
     bool            useAltHpelIf;
     bool            zeroMV;
   } TZSearchStruct;
+
+  Sample8 m_pattern8[MAX_CU_SIZE*MAX_CU_SIZE];
+  void xSetByteDist(const TZSearchStruct& s);
 
   // sub-functions for ME
   inline void xTZSearchHelp         ( TZSearchStruct& rcStruct, const int iSearchX, const int iSearchY, const uint8_t ucPointNr, const uint32_t uiDistance );

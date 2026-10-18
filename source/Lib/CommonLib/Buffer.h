@@ -220,6 +220,10 @@ struct AreaBuf : public Size
 
 typedef AreaBuf<      Pel>  PelBuf;
 typedef AreaBuf<const Pel> CPelBuf;
+typedef AreaBuf<Residual> ResiBuf;
+typedef AreaBuf<const Residual> CResiBuf;
+typedef AreaBuf<Sample8> SampleBuf8;
+typedef AreaBuf<const Sample8> CSampleBuf8;
 
 typedef AreaBuf<      TCoeff>  CoeffBuf;
 typedef AreaBuf<const TCoeff> CCoeffBuf;
@@ -754,6 +758,8 @@ struct UnitBuf
 
 typedef UnitBuf<      Pel>  PelUnitBuf;
 typedef UnitBuf<const Pel> CPelUnitBuf;
+typedef UnitBuf<Residual> ResiUnitBuf;
+typedef UnitBuf<const Residual> CResiUnitBuf;
 
 typedef UnitBuf<      TCoeff>  CoeffUnitBuf;
 typedef UnitBuf<const TCoeff> CCoeffUnitBuf;

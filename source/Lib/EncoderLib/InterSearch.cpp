@@ -408,6 +408,13 @@ void InterSearch::getBestSbt( CodingStructure* tempCS, CodingUnit* cu, uint8_t& 
 }
 
 
+void InterSearch::xSetByteDist(const TZSearchStruct& s)
+{
+  if(!s.ref8 || !s.org8 || m_cDistParam.applyWeight) return;
+  m_cDistParam.org8=s.org8; m_cDistParam.ref8=s.ref8; m_cDistParam.ref16Origin=s.piRefY;
+  m_cDistParam.distFunc=m_pcRdCost->m_sad8;
+}
+
 inline void InterSearch::xTZSearchHelp( TZSearchStruct& rcStruct, const int iSearchX, const int iSearchY, const uint8_t ucPointNr, const uint32_t uiDistance )
 {
   Distortion  uiSad = 0;
@@ -2015,6 +2022,18 @@ void InterSearch::xMotionEstimation(CodingUnit& cu, CPelUnitBuf& origBuf, RefPic
   CPelBuf buf = refPic->getRecoBuf(cu.blocks[COMP_Y]);
 
   TZSearchStruct cStruct;
+  const CSampleBuf8 byteRef=refPic->getRecoBuf8(cu.blocks[COMP_Y]);
+  if(byteRef.buf && m_lumaClpRng.bd==8 && !bBi) {
+    CHECK(tmpPattern.width>MAX_CU_SIZE || tmpPattern.height>MAX_CU_SIZE, "byte ME pattern too large");
+    for(int y=0;y<tmpPattern.height;y++)
+      for(int x=0;x<tmpPattern.width;x++) {
+        const Pel value=tmpPattern.at(x,y);
+        CHECK(unsigned(value)>255, "byte ME original outside 0..255");
+        m_pattern8[y*tmpPattern.width+x]=Sample8(value);
+      }
+    cStruct.ref8=byteRef.buf; cStruct.org8=m_pattern8;
+    if(cu.cs->picture->native8Trace)cu.cs->picture->native8MeBlocks.fetch_add(1,std::memory_order_relaxed);
+  }
   cStruct.pcPatternKey  = pcPatternKey;
   cStruct.iRefStride    = buf.stride;
   cStruct.piRefY        = buf.buf;
@@ -2048,6 +2067,7 @@ void InterSearch::xMotionEstimation(CodingUnit& cu, CPelUnitBuf& origBuf, RefPic
   {
     cStruct.subShiftMode = m_pcEncCfg->m_fastInterSearchMode == VVENC_FASTINTERSEARCH_MODE1 || m_pcEncCfg->m_fastInterSearchMode == VVENC_FASTINTERSEARCH_MODE3 ? 1 : 0;
     m_pcRdCost->setDistParam( m_cDistParam, *cStruct.pcPatternKey, cStruct.piRefY, cStruct.iRefStride, m_lumaClpRng.bd, COMP_Y, cStruct.subShiftMode );
+  xSetByteDist(cStruct);
 
     Mv bestInitMv = (bBi ? rcMv : rcMvPred);
     Mv cTmpMv     = bestInitMv;
@@ -2218,6 +2238,7 @@ void InterSearch::xPatternSearch( TZSearchStruct&  cStruct,
 
   //-- jclee for using the SAD function pointer
   m_pcRdCost->setDistParam( m_cDistParam, *cStruct.pcPatternKey, cStruct.piRefY, cStruct.iRefStride, m_lumaClpRng.bd, COMP_Y, cStruct.subShiftMode );
+  xSetByteDist(cStruct);
 
   const SearchRange& sr = cStruct.searchRange;
 
@@ -2334,6 +2355,7 @@ void InterSearch::xTZSearch( const CodingUnit& cu,
   //
   m_cDistParam.maximumDistortionForEarlyExit = cStruct.uiBestSad;
   m_pcRdCost->setDistParam( m_cDistParam, *cStruct.pcPatternKey, cStruct.piRefY, cStruct.iRefStride, m_lumaClpRng.bd, COMP_Y, cStruct.subShiftMode );
+  xSetByteDist(cStruct);
 
   // set rcMv (Median predictor) as start point and as best point
   xTZSearchHelp( cStruct, rcMv.hor, rcMv.ver, 0, 0 );

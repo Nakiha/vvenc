@@ -65,6 +65,8 @@ typedef vvencSliceType    SliceType;
 //! \ingroup CommonLib
 //! \{
 
+#include "Native8.h"
+
 namespace vvenc {
 
 #define JVET_M0497_MATRIX_MULT                            1 // 0: Fast method; 1: Matrix multiplication
@@ -178,7 +180,7 @@ namespace vvenc {
 // Named numerical types
 // ====================================================================================================================
 
-typedef       int16_t           Pel;               ///< pixel type
+typedef       WorkingSample     Pel;               ///< legacy signed working pixels; byte samples use Sample8
 typedef       int32_t           TCoeff;            ///< transform coefficient
 typedef       int16_t           TCoeffSig;         ///< transform coefficient as signalled
 typedef       int16_t           TMatrixCoeff;      ///< transform matrix coefficient
