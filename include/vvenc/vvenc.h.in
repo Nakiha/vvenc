@@ -321,6 +321,11 @@ VVENC_DECL int vvenc_init_pass( vvencEncoder *, int pass, const char * statsFNam
   \pre        The encoder has to be initialized successfully.
 */
 VVENC_DECL int vvenc_encode( vvencEncoder *, vvencYUVBuffer* YUVBuffer, vvencAccessUnit* accessUnit, bool* encodeDone );
+#define VVENC_LIVE_CQF_POLL_VERSION 1
+/* Opt-in live CQF, serial stages only. Advance already admitted pictures and
+ * return at most one AU without input, EOF, padding or a future-frame wait.
+ * payloadUsedSize==0 means more input is needed. Does not finalize encoding. */
+VVENC_DECL int vvenc_encode_pending( vvencEncoder *, vvencAccessUnit* accessUnit );
 
 /* vvenc_get_config
  This method fetches the current encoder configuration.

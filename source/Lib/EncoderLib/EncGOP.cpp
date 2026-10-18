@@ -1475,6 +1475,8 @@ void EncGOP::xInitPicsInCodingOrder( const PicList& picList )
     {
       // note: in case of rate cap, wait until the complete GOP is in the list and update-list is empty
       if( !m_pcEncCfg->m_rateCap ||
+        (m_pcEncCfg->m_liveCqfPoll && pic->gopEntry->m_liveGroupSize > 0 &&
+         std::count_if(picList.begin(),picList.end(),[&](const Picture* p){ return p->gopEntry->m_gopNum == pic->gopEntry->m_gopNum; }) == pic->gopEntry->m_liveGroupSize && m_rcUpdateList.empty()) ||
         ((pic->gopEntry->m_gopNum != picList.back()->gopEntry->m_gopNum || picList.back()->isFlush) && m_rcUpdateList.empty()) )
       {
         xInitGopQpCascade( *pic, it, picList );

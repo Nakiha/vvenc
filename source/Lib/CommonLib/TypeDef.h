@@ -878,6 +878,7 @@ typedef struct GOPEntry : vvencGOPEntry
 {
   int       m_codingNum;
   int       m_gopNum;
+  int       m_liveGroupSize = 0;
   int       m_defaultRPLIdx;
   int       m_mctfIndex;
   bool      m_isSTSA;
@@ -894,6 +895,7 @@ typedef struct GOPEntry : vvencGOPEntry
     vvenc_GOPEntry_default( this );
     m_codingNum        = -1;
     m_gopNum           = -1;
+    m_liveGroupSize    = 0;
     m_defaultRPLIdx    = -1;
     m_mctfIndex        = -1;
     m_isSTSA           = false;

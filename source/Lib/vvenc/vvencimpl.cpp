@@ -259,7 +259,7 @@ int VVEncImpl::setRecYUVBufferCallback( void * ctx, vvencRecYUVBufferCallback ca
   return VVENC_OK;
 }
 
-int VVEncImpl::encode( vvencYUVBuffer* pcYUVBuffer, vvencAccessUnit* pcAccessUnit, bool* pbEncodeDone )
+int VVEncImpl::encode( vvencYUVBuffer* pcYUVBuffer, vvencAccessUnit* pcAccessUnit, bool* pbEncodeDone, bool pending )
 {
   if( !m_bInitialized )                      { return VVENC_ERR_INITIALIZE; }
   if( m_eState == INTERNAL_STATE_FINALIZED ) { m_cErrorString = "encoder already flushed, please reinit."; return VVENC_ERR_RESTART_REQUIRED; }
@@ -276,6 +276,8 @@ int VVEncImpl::encode( vvencYUVBuffer* pcYUVBuffer, vvencAccessUnit* pcAccessUni
   }
 
   int iRet= VVENC_OK;
+  if (pending && (!m_cVVEncCfg.m_liveCqfPoll || pcYUVBuffer || m_eState != INTERNAL_STATE_ENCODING))
+    return VVENC_ERR_PARAMETER;
 
   bool bFlush = false;
   if( pcYUVBuffer )
@@ -356,7 +358,7 @@ int VVEncImpl::encode( vvencYUVBuffer* pcYUVBuffer, vvencAccessUnit* pcAccessUni
 
     if( m_eState == INTERNAL_STATE_INITIALIZED ){ m_eState = INTERNAL_STATE_ENCODING; }
   }
-  else
+  else if (!pending)
   {
     if( m_eState == INTERNAL_STATE_ENCODING ){ m_eState = INTERNAL_STATE_FLUSHING; }
     bFlush = true;
@@ -375,6 +377,10 @@ int VVEncImpl::encode( vvencYUVBuffer* pcYUVBuffer, vvencAccessUnit* pcAccessUni
 #endif
   {
     m_pEncLib->encodePicture( bFlush, pcYUVBuffer, cAu, *pbEncodeDone );
+    // At most four published pictures can be travelling through serial
+    // MCTF/GOP stages. Bound progress sweeps; never wait for future input.
+    for (int sweep=1; pending && cAu.empty() && sweep<8; ++sweep)
+      m_pEncLib->encodePicture( false, nullptr, cAu, *pbEncodeDone );
   }
 #if HANDLE_EXCEPTION
   catch( std::exception& e )

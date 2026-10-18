@@ -101,7 +101,7 @@ public:
 
   int setRecYUVBufferCallback( void *, vvencRecYUVBufferCallback );
 
-  int encode( vvencYUVBuffer* pcYUVBuffer, vvencAccessUnit* pcAccessUnit, bool* pbEncodeDone );
+  int encode( vvencYUVBuffer* pcYUVBuffer, vvencAccessUnit* pcAccessUnit, bool* pbEncodeDone, bool pending = false );
 
   int getParameterSets( vvencAccessUnit *pcAccessUnit );
 

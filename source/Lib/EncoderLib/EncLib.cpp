@@ -273,11 +273,11 @@ void EncLib::initPass( int pass, const char* statsFName )
 
   // gop encoder
   m_gopEncoder = new EncGOP( msg );
-  const int minQueueSize = m_encCfg.m_GOPSize + 1;
+  const int minQueueSize = m_encCfg.m_liveCqfPoll ? 1 : m_encCfg.m_GOPSize + 1;
   m_gopEncoder->initStage( m_encCfg, minQueueSize, 0, false, false, m_encCfg.m_stageParallelProc );
   m_gopEncoder->init( m_encCfg, m_preProcess->getGOPCfg(), *m_rateCtrl, m_threadPool, false );
   m_encStages.push_back( m_gopEncoder );
-  m_maxNumPicShared += minQueueSize;
+  m_maxNumPicShared += m_encCfg.m_liveCqfPoll ? m_encCfg.m_GOPSize + 1 : minQueueSize;
 
   // additional pictures due to structural delay
   m_maxNumPicShared += m_preProcess->getGOPCfg()->getNumReorderPics()[ m_encCfg.m_maxTLayer ];
@@ -419,7 +419,7 @@ void EncLib::encodePicture( bool flush, const vvencYUVBuffer* yuvInBuf, AccessUn
 {
   PROFILER_ACCUM_AND_START_NEW_SET( 1, g_timeProfiler, P_TOP_LEVEL );
 
-  CHECK( yuvInBuf == nullptr && ! flush, "no input picture given" );
+  CHECK( yuvInBuf == nullptr && ! flush && !m_encCfg.m_liveCqfPoll, "no input picture given" );
 
   // clear output access unit
   au.clearAu();

@@ -292,6 +292,14 @@ VVENC_DECL int vvenc_encode( vvencEncoder *enc, vvencYUVBuffer* YUVBuffer, vvenc
   return e->encode( YUVBuffer, accessUnit, encodeDone );
 }
 
+VVENC_DECL int vvenc_encode_pending( vvencEncoder *enc, vvencAccessUnit* accessUnit )
+{
+  auto e = (vvenc::VVEncImpl*)enc;
+  if (!e || !accessUnit) return VVENC_ERR_INITIALIZE;
+  bool done = false;
+  return e->encode( nullptr, accessUnit, &done, true );
+}
+
 VVENC_DECL int vvenc_get_config( vvencEncoder *enc, vvenc_config* cfg )
 {
   auto e = (vvenc::VVEncImpl*)enc;

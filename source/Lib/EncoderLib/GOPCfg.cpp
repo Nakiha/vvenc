@@ -158,6 +158,7 @@ void GOPCfg::getPtsGopEntries( const std::vector<GOPEntry*>& entries, bool intra
     dst.m_POC = m_nextPoc + src.m_POC - 1;
     dst.m_codingNum = m_cnOffset + coding;
     dst.m_gopNum = m_gopNum;
+      dst.m_liveGroupSize = size;
     dst.m_isValid = true;
     if( intra )
     {

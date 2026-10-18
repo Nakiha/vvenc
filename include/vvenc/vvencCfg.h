@@ -790,7 +790,8 @@ typedef struct vvenc_config
   // Fork-only opt-in. Uses one reserved byte; config size/layout is unchanged.
   int8_t              m_livePtsGop; // PTS-grid CRA scheduling, 4-picture P/BBB groups
   int8_t              m_liveFrameIntra; // explicit ordinary I requests; disables PTS-grid CRA
-  int8_t              m_reservedInt8[2];
+  int8_t              m_liveCqfPoll; // fork: bounded non-EOF progress with complete PTS groups
+  int8_t              m_reservedInt8[1];
   double              m_reservedDouble[8];
 
   // internal state variables
