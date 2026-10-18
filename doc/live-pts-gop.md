@@ -38,3 +38,12 @@ frame counts, PTS interval preservation, exact occupied-grid key positions,
 short tails IP/IBP/IBBP, fractional frame rates, cadence changes, jitter,
 timestamp gaps, nonzero origins, UDP output, RC and latency/trace accounting.
 See tests/vvenc_pts_integration.py and tests/vvenc_integration.py there.
+
+Native quality mode (zero target bitrate, QP/QPA, optionally capped CQF) has
+no RC analysis lookahead. After startup it may accept an input without an AU
+while the next PTS group is incomplete. It must return to the caller so that
+the remaining pictures can be submitted; the ordinary one-input/one-output
+post-startup wait would deadlock. This exception is limited to LivePtsGop
+with zero target bitrate; bitrate RC and the upstream scheduler are unchanged.
+EOF still waits for complete drain. Parent cqf_rate_integration.py exercises
+native CQF with decimation, explicit ordinary I, GOP4, and EOF short groups.

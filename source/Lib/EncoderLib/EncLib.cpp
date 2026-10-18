@@ -472,7 +472,14 @@ void EncLib::encodePicture( bool flush, const vvencYUVBuffer* yuvInBuf, AccessUn
     }
 
     // wait if input picture hasn't been stored yet or if encoding is running and no new output access unit has been encoded
-    bool waitAndStay = inputPending || ( m_rateCtrl->rcIsFinalPass && m_AuList.empty() && ! isQueueEmpty && ( m_accessUnitOutputStarted || flush ) );
+    // PTS GOP planning publishes complete short groups. Without RC lookahead,
+    // CQF may output the first AU before the next group has been submitted.
+    // Requiring one AU per subsequent input would then wait for pictures that
+    // only the blocked caller can supply. Accept that input with no AU; EOF
+    // still drains all queued pictures. Default and bitrate-RC paths retain
+    // their existing one-in/one-out wait contract.
+    const bool ptsQualityInput = m_encCfg.m_livePtsGop && m_encCfg.m_RCTargetBitrate == 0;
+    bool waitAndStay = inputPending || ( m_rateCtrl->rcIsFinalPass && m_AuList.empty() && ! isQueueEmpty && ( ( m_accessUnitOutputStarted && !ptsQualityInput ) || flush ) );
     if( ! waitAndStay )
     {
       break;
