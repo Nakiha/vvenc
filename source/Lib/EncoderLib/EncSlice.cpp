@@ -830,7 +830,7 @@ void EncSlice::xProcessCtus( Picture* pic, const unsigned startCtuTsAddr, const 
                                                  m_ctuTasksDoneCounter,
                                                  nullptr,
                                                  {},
-                                                 EncSlice::xProcessCtuTask<true> );
+                                                 EncSlice::xProcessCtuTask<true>, LCT_CTU );
     }
   }
   else

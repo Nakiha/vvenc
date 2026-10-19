@@ -57,6 +57,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #include "CommonLib/CommonDef.h"
+#include "LiveCpuLedger.h"
 #if ENABLE_TIME_PROFILING_MT_MODE
 #include "CommonLib/TimeProfiler.h"
 #endif
@@ -252,6 +253,7 @@ class NoMallocThreadPool
 
   struct Slot
   {
+    LiveCpuTask            liveCpuKind { LCT_OTHER };
     TaskFunc               func      { nullptr };
     TaskFunc               readyCheck{ nullptr };
     void*                  param     { nullptr };
@@ -397,7 +399,8 @@ public:
                        WaitCounter*        counter                      = nullptr,
                        Barrier*            done                         = nullptr,
                        const CBarrierVec&& barriers                     = {},
-                       bool             ( *readyCheck )( int, TParam* ) = nullptr )
+                       bool             ( *readyCheck )( int, TParam* ) = nullptr,
+                       LiveCpuTask         liveCpuKind = LCT_OTHER )
   {
     if( m_threads.empty() )
     {
@@ -452,6 +455,7 @@ public:
             counter->operator++();
           }
 
+          t.liveCpuKind= liveCpuKind;
           t.func       = (TaskFunc)func;
           t.readyCheck = (TaskFunc)readyCheck;
           t.param      = param;
@@ -482,6 +486,8 @@ public:
   void waitForThreads();
 
   int numThreads() const { return (int)m_threads.size(); }
+  bool liveCpuEnabled() const { return m_liveCpu.enabled; }
+  LiveCpuSnapshot liveCpuSnapshot() const { return m_liveCpu.snapshot(); }
 #if ENABLE_TIME_PROFILING_MT_MODE
   const std::vector< TProfiler* >& getProfilers() { return profilers; }
 #endif
@@ -521,6 +527,7 @@ private:
 
   // members
   std::string              m_poolName;
+  LiveCpuLedger           m_liveCpu;
   std::atomic_bool         m_exitThreads{ false };
   std::vector<ThreadImpl>  m_threads;
   ChunkedTaskQueue         m_tasks;
@@ -539,7 +546,7 @@ private:
 
   // internal functions
   void         threadProc  ( int threadId, const VVEncCfg& encCfg );
-  TaskIterator findNextTask( int threadId, TaskIterator startSearch );
+  TaskIterator findNextTask( int threadId, TaskIterator startSearch, LiveCpuAmounts* liveCpu=nullptr );
   bool         processTask ( int threadId, Slot& task );
 };
 
