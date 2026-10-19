@@ -50,6 +50,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "CommonDefX86.h"
 #include "Unit.h"
 #include "InterpolationFilter.h"
+#include "CommonLib/SccBlockStats.h"
 
 #ifdef TARGET_SIMD_X86
 #if ENABLE_SIMD_OPT_BUFFER
@@ -2599,6 +2600,9 @@ void PelBufferOps::_initPelBufOpsX86()
 
   AvgHighPassWithDownsampling = AvgHighPassWithDownsampling_SIMD<vext>;
   AvgHighPass = AvgHighPass_SIMD<vext>;
+#if defined(__SSE2__)
+  SccBlockDeviation = detail::sccBlockDeviationSse2;
+#endif
   AvgHighPassWithDownsamplingDiff1st = AvgHighPassWithDownsamplingDiff1st_SIMD<vext>;
   AvgHighPassWithDownsamplingDiff2nd = AvgHighPassWithDownsamplingDiff2nd_SIMD<vext>;
   HDHighPass = HDHighPass_SIMD<vext>;

@@ -593,9 +593,7 @@ void PreProcess::xDetectScc( Picture* pic ) const
   static constexpr int accV = 2;
 
   static_assert( accM <= 4 && accV <= 4, "Maximum Mean and Variance accuracy of 4 allowed!" );
-  static constexpr int shfM = 4 - accM;
   static constexpr int shfV = 4 + accM - accV;
-  static constexpr int addM = 1 << shfM >> 1;
   static constexpr int addV = 1 << shfV >> 1;
 
   static constexpr int SizeS = SIZE_BL << 1;
@@ -631,28 +629,11 @@ void PreProcess::xDetectScc( Picture* pic ) const
         {
           const Pel *p0 = &piSrc[j * uiStride + i];
 
-          int Mit = 0;
-          int V   = 0;
-
-          for( int h = 0; h < SIZE_BL; h++, p0 += uiStride )
-          {
-            for( int w = 0; w < SIZE_BL; w++ )
-            {
-              Mit += p0[w];
-            }
-          }
-
-          Mit = ( Mit + addM ) >> shfM;
-
-          p0 = &piSrc[j * uiStride + i];
-
-          for( int h = 0; h < SIZE_BL; h++, p0 += uiStride )
-          {
-            for( int w = 0; w < SIZE_BL; w++ )
-            {
-              V += abs( Mit - ( int( p0[w] ) << accM ) );
-            }
-          }
+          // accM=4 makes the fixed-point mean the exact 16-sample sum.
+          // Retain the same two statistics while loading each source row once.
+          static_assert( accM == 4 && SIZE_BL == 4, "SCC primitive assumes 4x4 blocks and accM=4" );
+          int Mit;
+          const int V = g_pelBufOP.SccBlockDeviation( p0, uiStride, Mit );
 
           // if variance is lower than 1 and mean is lower/equal to minLevel
           if( V < ( 1 << ( accM + 4 ) ) && Mit <= ( minLevel << accM ) )
