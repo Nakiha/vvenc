@@ -58,6 +58,11 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "GOPCfg.h"
 
 #include <list>
+#include <ctime>
+#if defined(__linux__)
+#include <sys/syscall.h>
+#include <unistd.h>
+#endif
 
 //! \ingroup EncoderLib
 //! \{
@@ -2550,6 +2555,33 @@ void EncGOP::xWritePicture( Picture& pic, AccessUnitList& au, bool isEncodeLtRef
   if(pic.m_picShared->m_liveTrace.data.input_us) {
     pic.m_picShared->m_liveTrace.data.au_us=liveTraceNow();
     au.liveTrace=pic.m_picShared->m_liveTrace.snapshot();
+    if(m_threadPool && m_threadPool->liveCpuEnabled()) {
+      const auto ledger=m_threadPool->liveCpuSnapshot();
+      auto& d=au.liveTrace;d.pool_ledger_enabled=1;d.pool_ledger_valid=ledger.valid;
+      d.pool_total_cpu_us=ledger.value[LC_TOTAL];
+      d.pool_scan_cpu_us=ledger.value[LC_SCAN];
+      d.pool_yield_cpu_us=ledger.value[LC_YIELD];
+      d.pool_lock_cpu_us=ledger.value[LC_LOCK];
+      d.pool_tasks_cpu_us=ledger.value[LC_TASKS];
+      d.pool_mctf_me_cpu_us=ledger.value[LC_MCTF_ME];
+      d.pool_mctf_filter_cpu_us=ledger.value[LC_MCTF_FILTER];
+      d.pool_ctu_cpu_us=ledger.value[LC_CTU];
+      d.pool_other_cpu_us=ledger.value[LC_OTHER];
+      d.pool_scan_calls=ledger.value[LC_SCAN_CALLS];
+      d.pool_ready_calls=ledger.value[LC_READY_CALLS];
+      d.pool_ready_failed=ledger.value[LC_READY_FAILED];
+      d.pool_empty_scans=ledger.value[LC_EMPTY_SCANS];
+      d.pool_task_calls=ledger.value[LC_TASK_CALLS];
+#ifdef CLOCK_PROCESS_CPUTIME_ID
+      timespec process{};clock_gettime(CLOCK_PROCESS_CPUTIME_ID,&process);
+      d.ledger_process_cpu_us=int64_t(process.tv_sec)*1000000+process.tv_nsec/1000;
+#endif
+      d.ledger_caller_cpu_us=liveTraceCpu();
+#if defined(__linux__)
+      d.ledger_caller_tid=::syscall(SYS_gettid);
+#endif
+      d.ledger_snapshot_end_us=liveTraceNow();
+    }
     au.liveTrace.byte_reference_pack_us=pic.native8PackUs;
     au.liveTrace.byte_me_blocks=pic.native8MeBlocks.load(std::memory_order_relaxed);
   }

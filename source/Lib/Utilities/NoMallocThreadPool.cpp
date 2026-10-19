@@ -70,6 +70,7 @@ NoMallocThreadPool::NoMallocThreadPool( int numThreads, const char * threadPoolN
     numThreads = std::thread::hardware_concurrency();
   }
 
+  CHECK(m_liveCpu.enabled && numThreads>64,"live CPU ledger supports at most 64 pool threads");
   for( int i = 0; i < numThreads; ++i )
   {
     m_threads.emplace_back( &NoMallocThreadPool::threadProc, this, i, *encCfg );
@@ -158,10 +159,22 @@ void NoMallocThreadPool::threadProc( int threadId, const VVEncCfg& encCfg )
   }
 #endif
 
+  LiveCpuAmounts liveCpu{};
+  const bool measure=m_liveCpu.enabled;
+  const int64_t cpuStart=measure?ledgerCpuNow():0;
+  auto publish=[&]{if(measure){liveCpu[LC_TOTAL]=ledgerCpuNow()-cpuStart;m_liveCpu.publish(threadId,liveCpu);}};
+  auto find=[&](TaskIterator next){
+    const int64_t begin=measure?ledgerCpuNow():0;
+    auto it=findNextTask(threadId,next,measure?&liveCpu:nullptr);
+    if(measure){liveCpu[LC_SCAN]+=ledgerCpuNow()-begin;liveCpu[LC_SCAN_CALLS]++;
+      if(!it.isValid())liveCpu[LC_EMPTY_SCANS]++;
+      if((liveCpu[LC_SCAN_CALLS]&63)==0)publish();}
+    return it;
+  };
   auto nextTaskIt = m_tasks.begin();
   while( !m_exitThreads )
   {
-    auto taskIt = findNextTask( threadId, nextTaskIt );
+    auto taskIt = find(nextTaskIt);
     if( !taskIt.isValid() )
     {
       std::unique_lock<std::mutex> l( m_idleMutex, std::defer_lock );
@@ -171,7 +184,7 @@ void NoMallocThreadPool::threadProc( int threadId, const VVEncCfg& encCfg )
       const auto startWait = std::chrono::steady_clock::now();
       while( !m_exitThreads )
       {
-        taskIt = findNextTask( threadId, nextTaskIt );
+        taskIt = find(nextTaskIt);
         if( taskIt.isValid() || m_exitThreads )
         {
           break;
@@ -183,12 +196,16 @@ void NoMallocThreadPool::threadProc( int threadId, const VVEncCfg& encCfg )
             && !m_exitThreads )
         {
           ITT_TASKSTART(itt_domain_thrd, itt_handle_TPblocked);
+          const int64_t begin=measure?ledgerCpuNow():0;
           l.lock();
+          if(measure)liveCpu[LC_LOCK]+=ledgerCpuNow()-begin;
           ITT_TASKEND(itt_domain_thrd, itt_handle_TPblocked);
         }
         else
         {
+          const int64_t begin=measure?ledgerCpuNow():0;
           std::this_thread::yield();
+          if(measure)liveCpu[LC_YIELD]+=ledgerCpuNow()-begin;
         }
       }
       m_waitingThreads.fetch_sub( 1, std::memory_order_relaxed );
@@ -196,17 +213,27 @@ void NoMallocThreadPool::threadProc( int threadId, const VVEncCfg& encCfg )
     }
     if( m_exitThreads )
     {
+      publish();
       return;
     }
 
+    const LiveCpuTask kind=(*taskIt).liveCpuKind;
+    const int64_t begin=measure?ledgerCpuNow():0;
     processTask( threadId, *taskIt );
+    if(measure){
+      const int64_t elapsed=ledgerCpuNow()-begin;
+      liveCpu[LC_TASKS]+=elapsed;liveCpu[LC_TASK_CALLS]++;
+      liveCpu[kind==LCT_CTU?LC_CTU:kind==LCT_MCTF_ME?LC_MCTF_ME:kind==LCT_MCTF_FILTER?LC_MCTF_FILTER:LC_OTHER]+=elapsed;
+      publish();
+    }
 
     nextTaskIt = taskIt;
     nextTaskIt.incWrap();
   }
+  publish();
 }
 
-NoMallocThreadPool::TaskIterator NoMallocThreadPool::findNextTask( int threadId, TaskIterator startSearch )
+NoMallocThreadPool::TaskIterator NoMallocThreadPool::findNextTask( int threadId, TaskIterator startSearch, LiveCpuAmounts* liveCpu )
 {
   if( !startSearch.isValid() )
   {
@@ -235,9 +262,10 @@ NoMallocThreadPool::TaskIterator NoMallocThreadPool::findNextTask( int threadId,
         }
         t.barriers.clear();   // clear barriers, so we don't need to check them on the next try (we assume they won't get locked again)
       }
-      if( t.readyCheck && t.readyCheck( threadId, t.param ) == false )
+      if( t.readyCheck && (liveCpu?((*liveCpu)[LC_READY_CALLS]++,true):true) && t.readyCheck( threadId, t.param ) == false )
       {
         // reschedule
+        if(liveCpu)(*liveCpu)[LC_READY_FAILED]++;
         t.state.store( WAITING );
         continue;
       }

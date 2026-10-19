@@ -1389,7 +1389,7 @@ void MCTF::motionEstimationLuma(Array2D<MotionVector> &mvs, const PelStorage &or
       cEstParams.blockY = blockY;
       cEstParams.bitDepth = bitDepth;
 
-      m_threadPool->addBarrierTask<EstParams>( task, &cEstParams, &taskCounter);
+      m_threadPool->addBarrierTask<EstParams>( task, &cEstParams, &taskCounter, nullptr, {}, nullptr, LCT_MCTF_ME );
     }
     taskCounter.wait();
   }
@@ -1546,7 +1546,7 @@ void MCTF::bilateralFilter(const PelStorage& orgPic, std::deque<TemporalFilterSo
       cFltParams.mctf = this;
       cFltParams.yStart = yStart;
 
-      m_threadPool->addBarrierTask<FltParams>( task, &cFltParams, &taskCounter);
+      m_threadPool->addBarrierTask<FltParams>( task, &cFltParams, &taskCounter, nullptr, {}, nullptr, LCT_MCTF_FILTER );
     }
     taskCounter.wait();
   }
