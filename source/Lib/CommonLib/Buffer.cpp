@@ -51,6 +51,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "Unit.h"
 #include "Slice.h"
 #include "InterpolationFilter.h"
+#include "SccBlockStats.h"
 
 //! \ingroup CommonLib
 //! \{
@@ -491,6 +492,7 @@ PelBufferOps::PelBufferOps()
   fillPtrMap        = fillMapPtr_Core;
   AvgHighPassWithDownsampling = AvgHighPassWithDownsamplingCore;
   AvgHighPass = AvgHighPassCore;
+  SccBlockDeviation = detail::sccBlockDeviationScalar;
   AvgHighPassWithDownsamplingDiff1st = AvgHighPassWithDownsamplingDiff1stCore;
   AvgHighPassWithDownsamplingDiff2nd = AvgHighPassWithDownsamplingDiff2ndCore;
   HDHighPass = HDHighPassCore;
