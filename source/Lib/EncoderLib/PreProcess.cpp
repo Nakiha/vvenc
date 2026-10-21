@@ -232,15 +232,15 @@ void PreProcess::xProcessPtsPictures( const PicList& picList, PicList& doneList,
       PicList prefix;
       for( auto old : picList ) if( old->poc <= pic->poc ) prefix.push_back( old );
       auto& trace=pic->m_picShared->m_liveTrace.data;
-      int64_t cpu=0;
+      int64_t cpu=0,raw=0;
       if(trace.input_us) {
         trace.group_last_input_us=pending[count-1]->m_picShared->m_liveTrace.data.input_us;
-        trace.group_formed_us=groupFormed;trace.preprocess_begin_us=liveTraceNow();cpu=liveTraceCpu();
+        trace.group_formed_us=groupFormed;trace.preprocess_begin_us=liveTraceNow();raw=liveTraceRaw();cpu=liveTraceCpu();
       }
       xLinkPrevQpaBufs( pic, prefix );
       xGetVisualActivity( pic, prefix );
       xDetectScc( pic );
-      if(trace.input_us){trace.preprocess_cpu_us=liveTraceCpu()-cpu;trace.group_ready_us=liveTraceNow();}
+      if(trace.input_us){trace.preprocess_cpu_us=liveTraceCpu()-cpu;trace.preprocess_cpu_wall_us=liveTraceRaw()-raw;trace.group_ready_us=liveTraceNow();}
       doneList.push_back( pic );
       m_lastPoc = pic->poc;
       m_lastPts = int64_t(pic->cts);

@@ -6,6 +6,12 @@
 #include <ctime>
 namespace vvenc {
 inline int64_t liveTraceNow() { return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
+inline int64_t liveTraceRaw() {
+#ifdef CLOCK_MONOTONIC_RAW
+  timespec t; if(!clock_gettime(CLOCK_MONOTONIC_RAW,&t))return int64_t(t.tv_sec)*1000000+t.tv_nsec/1000;
+#endif
+  return -1;
+}
 inline int64_t liveTraceCpu() {
 #ifdef CLOCK_THREAD_CPUTIME_ID
   timespec t; if(!clock_gettime(CLOCK_THREAD_CPUTIME_ID,&t))return int64_t(t.tv_sec)*1000000+t.tv_nsec/1000;
